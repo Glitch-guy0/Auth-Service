@@ -1,0 +1,75 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2026-07-12T00:00:00Z",
+    "last_updated": "2026-07-12T00:00:00Z",
+    "completed": "2026-07-12T00:00:00Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "quick",
+  "project_root": "/Users/prajwal/Documents/learning/AuthService",
+  "project_knowledge": "/Users/prajwal/Documents/learning/AuthService/docs",
+  "completed_steps": [
+    {
+      "step": "step_1",
+      "status": "completed",
+      "timestamp": "2026-07-12T00:00:00Z",
+      "summary": "Classified as monolith with 1 part, NestJS backend"
+    },
+    {
+      "step": "step_2",
+      "status": "completed",
+      "timestamp": "2026-07-12T00:00:00Z",
+      "summary": "Found existing documentation in _bmad-output/"
+    },
+    {
+      "step": "step_3",
+      "status": "completed",
+      "timestamp": "2026-07-12T00:00:00Z",
+      "summary": "Tech stack: NestJS 11.x on TypeScript 5.8"
+    },
+    {
+      "step": "step_5",
+      "status": "completed",
+      "timestamp": "2026-07-12T00:00:00Z",
+      "summary": "Source tree documented"
+    },
+    {
+      "step": "step_9",
+      "status": "completed",
+      "timestamp": "2026-07-12T00:00:00Z",
+      "summary": "All supporting docs written"
+    },
+    {
+      "step": "step_10",
+      "status": "completed",
+      "timestamp": "2026-07-12T00:00:00Z",
+      "summary": "Master index generated"
+    },
+    {
+      "step": "step_12",
+      "status": "completed",
+      "timestamp": "2026-07-12T00:00:00Z",
+      "summary": "Workflow complete"
+    }
+  ],
+  "current_step": "completed",
+  "findings": {
+    "project_classification": "Monolith, NestJS backend, 1 part",
+    "technology_stack": "NestJS 11.x, TypeScript 5.8, PostgreSQL, MongoDB, Redis"
+  },
+  "outputs_generated": [
+    "project-scan-report.json",
+    "index.md",
+    "project-overview.md",
+    "source-tree-analysis.md",
+    "development-guide.md"
+  ],
+  "project_types": [
+    {
+      "part_id": "backend",
+      "project_type_id": "backend",
+      "display_name": "Backend Service"
+    }
+  ]
+}

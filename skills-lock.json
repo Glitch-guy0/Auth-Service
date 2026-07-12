@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "excalidraw-diagram": {
+      "source": "coleam00/excalidraw-diagram-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "7313305537a3c6368c2d091bf243f32ce7d01750ba21e99891a34a5082fb441a"
+    }
+  }
+}
