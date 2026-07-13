@@ -1,0 +1,49 @@
+# Entity Class Diagram
+# Maps to: FR-13, FR-14, FR-23, FR-24, FR-25
+
+classDiagram
+    class User {
+        <<Entity>>
+        +UUID id
+        +string username
+        +string email
+        +string password
+        +boolean blocked
+        +boolean is_verified
+        +Date created_at
+        +Date updated_at
+    }
+    
+    class RefreshToken {
+        <<Entity>>
+        +UUID id
+        +UUID user_id
+        +string token_hash
+        +Date expires_at
+        +Date created_at
+    }
+    
+    class UserDemographics {
+        <<MongoDocument>>
+        +UUID user_id
+        +string last_ip
+        +string country
+        +string city
+        +Date last_login
+    }
+    
+    class TokenBlacklist {
+        <<RedisKey>>
+        +string jti
+        +Date expires_at
+        +UUID user_id
+    }
+    
+    User "1" --> "0..*" RefreshToken : has many
+    User "1" --> "0..1" UserDemographics : has one
+    User "1" --> "0..*" TokenBlacklist : can have
+    
+    note for User "PostgreSQL: users table<br/>UUID primary key<br/>Unique constraints on username, email"
+    note for RefreshToken "PostgreSQL: refresh_token_keys table<br/>Bcrypt hashed tokens<br/>TTL-based expiry"
+    note for UserDemographics "MongoDB: user_demographics collection<br/>Optional connection<br/>Async writes"
+    note for TokenBlacklist "Redis: blacklist:{jti}<br/>Auto-expiry with TTL<br/>Used for logout"

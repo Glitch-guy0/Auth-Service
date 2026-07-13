@@ -1026,10 +1026,16 @@ export class AuthController {
 
 | Diagram | Location | Purpose |
 |---------|----------|---------|
-| `docs/uml/architecture.excalidraw` | Hexagonal architecture overview |
-| `docs/uml/auth-flow.excalidraw` | Authentication flow sequence |
-| `docs/uml/database-schema.excalidraw` | Entity relationship diagram |
-| `docs/uml/module-structure.excalidraw` | Module dependencies |
+| `_bmad-output/implementation-artifacts/uml/01-sequence-registration.mmd` | Registration flow sequence |
+| `_bmad-output/implementation-artifacts/uml/02-sequence-login.mmd` | Login flow sequence |
+| `_bmad-output/implementation-artifacts/uml/03-sequence-refresh.mmd` | Token refresh sequence |
+| `_bmad-output/implementation-artifacts/uml/04-sequence-logout.mmd` | Logout flow sequence |
+| `_bmad-output/implementation-artifacts/uml/05-class-entities.mmd` | Entity relationships |
+| `_bmad-output/implementation-artifacts/uml/06-class-services.mmd` | Service hierarchy |
+| `_bmad-output/implementation-artifacts/uml/07-class-exceptions.mmd` | Exception hierarchy |
+| `_bmad-output/implementation-artifacts/uml/08-component-hexagonal.mmd` | Hexagonal architecture |
+| `_bmad-output/implementation-artifacts/uml/09-package-modules.mmd` | Module dependencies |
+| `_bmad-output/implementation-artifacts/uml/10-object-runtime.mmd` | Runtime instances |
 
 **Architecture Diagram Elements:**
 

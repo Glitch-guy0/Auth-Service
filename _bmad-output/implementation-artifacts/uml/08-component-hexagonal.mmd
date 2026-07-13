@@ -1,0 +1,88 @@
+# Component Diagram - Hexagonal Architecture
+# Maps to: Section 11.4 Folder Structure, Hexagonal Architecture
+
+graph TB
+    subgraph "Inbound Adapters (Driving)"
+        HTTP["HTTP Controller<br/>AuthController"]
+        GUARD["JWT Auth Guard<br/>JwtAuthGuard"]
+        ADMIN["Admin Controller<br/>UserController"]
+        SWAGGER["Swagger UI<br/>/api/docs"]
+    end
+    
+    subgraph "Ports (Interfaces)"
+        AUTH_PORT["IAuthService<br/>register, login,<br/>refresh, logout"]
+        USER_PORT["IUserService<br/>findByEmail, findByUsername,<br/>create, update"]
+        TOKEN_PORT["ITokenService<br/>generateTokenPair,<br/>validateRefreshToken,<br/>blacklistToken"]
+        LOG_PORT["ILoggerService<br/>debug, info, warn,<br/>error, fatal"]
+    end
+    
+    subgraph "Core Domain (Application)"
+        AUTH_SVC["AuthService<br/>Authentication use cases"]
+        USER_SVC["UserService<br/>User management"]
+        TOKEN_SVC["TokenService<br/>JWT generation"]
+        LOG_SVC["LoggerService<br/>Structured logging"]
+    end
+    
+    subgraph "Outbound Adapters (Driven)"
+        PG["PostgreSQL Adapter<br/>TypeORM"]
+        REDIS["Redis Adapter<br/>Cache/Blacklist"]
+        MONGO["MongoDB Adapter<br/>Demographics"]
+        KEYS["KeyManager<br/>RSA Keys"]
+    end
+    
+    subgraph "Infrastructure"
+        CONFIG["ConfigService<br/>Environment"]
+        VALIDATOR["ValidationPipe<br/>Input validation"]
+        FILTER["HttpExceptionFilter<br/>Error handling"]
+    end
+    
+    HTTP --> AUTH_PORT
+    GUARD --> TOKEN_PORT
+    ADMIN --> USER_PORT
+    SWAGGER -.-> HTTP
+    
+    AUTH_PORT --> AUTH_SVC
+    USER_PORT --> USER_SVC
+    TOKEN_PORT --> TOKEN_SVC
+    LOG_PORT --> LOG_SVC
+    
+    AUTH_SVC --> USER_SVC
+    AUTH_SVC --> TOKEN_SVC
+    AUTH_SVC --> LOG_SVC
+    
+    USER_SVC --> PG
+    TOKEN_SVC --> PG
+    TOKEN_SVC --> REDIS
+    USER_SVC --> MONGO
+    TOKEN_SVC --> KEYS
+    
+    AUTH_SVC --> CONFIG
+    USER_SVC --> CONFIG
+    TOKEN_SVC --> CONFIG
+    
+    HTTP --> VALIDATOR
+    HTTP --> FILTER
+    
+    style HTTP fill:#4CAF50,color:#fff
+    style GUARD fill:#4CAF50,color:#fff
+    style ADMIN fill:#4CAF50,color:#fff
+    style SWAGGER fill:#4CAF50,color:#fff
+    
+    style AUTH_PORT fill:#2196F3,color:#fff
+    style USER_PORT fill:#2196F3,color:#fff
+    style TOKEN_PORT fill:#2196F3,color:#fff
+    style LOG_PORT fill:#2196F3,color:#fff
+    
+    style AUTH_SVC fill:#FF9800,color:#fff
+    style USER_SVC fill:#FF9800,color:#fff
+    style TOKEN_SVC fill:#FF9800,color:#fff
+    style LOG_SVC fill:#FF9800,color:#fff
+    
+    style PG fill:#9C27B0,color:#fff
+    style REDIS fill:#9C27B0,color:#fff
+    style MONGO fill:#9C27B0,color:#fff
+    style KEYS fill:#9C27B0,color:#fff
+    
+    style CONFIG fill:#607D8B,color:#fff
+    style VALIDATOR fill:#607D8B,color:#fff
+    style FILTER fill:#607D8B,color:#fff

@@ -1,0 +1,52 @@
+# Token Refresh Sequence
+# Maps to: FR-3, FR-6, FR-7
+
+sequenceDiagram
+    participant Client
+    participant AuthController
+    participant AuthService
+    participant TokenService
+    participant KeyManager
+    participant PostgreSQL
+
+    Client->>AuthController: POST /auth/v1/refresh
+    AuthController->>AuthController: Extract refresh token from httpOnly cookie
+    
+    AuthController->>AuthService: refresh(refreshToken)
+    
+    AuthService->>TokenService: validateRefreshToken(refreshToken)
+    TokenService->>PostgreSQL: SELECT * FROM refresh_token_keys WHERE token_hash = ?
+    PostgreSQL-->>TokenService: RefreshToken entity
+    
+    alt Token not found
+        TokenService-->>AuthService: TokenRevokedException(TOKEN_REVOKED)
+        AuthService-->>AuthController: AuthenticationException(TOKEN_REVOKED)
+        AuthController-->>Client: 401 Unauthorized
+    else Token expired
+        TokenService->>TokenService: Check expires_at < now()
+        TokenService-->>AuthService: TokenExpiredException(TOKEN_EXPIRED)
+        AuthService-->>AuthController: AuthenticationException(TOKEN_EXPIRED)
+        AuthController-->>Client: 401 Unauthorized
+    else Token valid
+        TokenService->>PostgreSQL: SELECT * FROM users WHERE id = token.user_id
+        PostgreSQL-->>TokenService: User entity
+        
+        AuthService->>TokenService: generateTokenPair(user)
+        TokenService->>KeyManager: getPrivateKey()
+        KeyManager-->>TokenService: PrivateKey (cleared after use)
+        
+        TokenService->>TokenService: Delete old refresh token
+        TokenService->>PostgreSQL: DELETE FROM refresh_token_keys WHERE id = ?
+        
+        TokenService->>TokenService: Sign new access token (RSA)
+        Note right of TokenService: New JWT with fresh iat/exp
+        
+        TokenService->>PostgreSQL: INSERT INTO refresh_token_keys
+        PostgreSQL-->>TokenService: New RefreshToken entity
+        
+        TokenService-->>AuthService: {accessToken, refreshToken}
+        AuthService-->>AuthController: {accessToken, refreshToken}
+        
+        AuthController->>AuthController: Set-Cookie (httpOnly, secure, sameSite=strict)
+        AuthController-->>Client: 200 OK + Set-Cookie
+    end

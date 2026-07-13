@@ -1,0 +1,157 @@
+# Package Diagram - Module Dependencies
+# Maps to: Section 11.4 Folder Structure, Section 11.5 Internal Library Management
+
+packageDiagram
+    package "Feature Modules" {
+        package "auth" {
+            class AuthModule
+            class AuthController
+            class AuthService
+            class JwtAuthGuard
+        }
+        
+        package "user" {
+            class UserModule
+            class UserController
+            class UserService
+            class UserEntity
+        }
+        
+        package "token" {
+            class TokenModule
+            class TokenService
+            class TokenEntity
+        }
+        
+        package "logging" {
+            class LoggingModule
+            class LoggerService
+        }
+    }
+    
+    package "Shared Utilities" {
+        package "decorators" {
+            class RetryDecorator
+            class CacheDecorator
+            class LogDecorator
+        }
+        
+        package "filters" {
+            class HttpExceptionFilter
+            class AllExceptionsFilter
+        }
+        
+        package "guards" {
+            class JwtAuthGuard
+            class RolesGuard
+        }
+        
+        package "interceptors" {
+            class LoggingInterceptor
+            class TimeoutInterceptor
+            class TransformInterceptor
+        }
+        
+        package "pipes" {
+            class ValidationPipe
+        }
+        
+        package "interfaces" {
+            class IUserService
+            class ITokenService
+        }
+        
+        package "utils" {
+            class HashUtil
+            class UuidUtil
+        }
+    }
+    
+    package "Configuration" {
+        package "env" {
+            class EnvValidator
+        }
+        
+        package "database" {
+            class DatabaseConfig
+        }
+        
+        package "context" {
+            class AppContext
+        }
+    }
+    
+    package "Database Layer" {
+        package "migrations" {
+            class TypeOrmMigrations
+        }
+        
+        package "seeds" {
+            class DatabaseSeeds
+        }
+    }
+    
+    package "Root" {
+        class AppModule
+        class Main
+    }
+    
+    AuthModule --> UserModule
+    AuthModule --> TokenModule
+    AuthModule --> LoggingModule
+    
+    UserModule --> LoggingModule
+    TokenModule --> LoggingModule
+    
+    AuthModule --> RetryDecorator
+    AuthModule --> HttpExceptionFilter
+    AuthModule --> JwtAuthGuard
+    AuthModule --> LoggingInterceptor
+    AuthModule --> ValidationPipe
+    AuthModule --> IUserService
+    
+    UserModule --> RetryDecorator
+    UserModule --> HttpExceptionFilter
+    UserModule --> RolesGuard
+    UserModule --> IUserService
+    UserModule --> HashUtil
+    
+    TokenModule --> RetryDecorator
+    TokenModule --> ITokenService
+    TokenModule --> HashUtil
+    
+    LoggingModule --> RetryDecorator
+    LoggingModule --> IUserService
+    
+    AuthModule --> EnvValidator
+    AuthModule --> DatabaseConfig
+    AuthModule --> AppContext
+    
+    UserModule --> EnvValidator
+    UserModule --> DatabaseConfig
+    UserModule --> AppContext
+    
+    TokenModule --> EnvValidator
+    TokenModule --> DatabaseConfig
+    TokenModule --> AppContext
+    
+    LoggingModule --> EnvValidator
+    LoggingModule --> AppContext
+    
+    DatabaseConfig --> TypeOrmMigrations
+    DatabaseConfig --> DatabaseSeeds
+    
+    AppModule --> AuthModule
+    AppModule --> UserModule
+    AppModule --> TokenModule
+    AppModule --> LoggingModule
+    AppModule --> EnvValidator
+    AppModule --> DatabaseConfig
+    
+    Main --> AppModule
+    
+    note for FeatureModules "Green: Core business logic modules"
+    note for SharedUtilities "Blue: Reusable utilities and patterns"
+    note for Configuration "Orange: App and database configuration"
+    note for DatabaseLayer "Purple: Database management"
+    note for Root "Red: Application entry point"
