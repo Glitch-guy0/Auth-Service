@@ -1,85 +1,11 @@
-%% Service Class Diagram
+%% Class Diagram
 %% Maps to: Hexagonal Architecture, Ports & Adapters
-%% Intermediate types: Zod schemas, DTOs, Entity unions, Type utilities
+%% Service implementations, dependencies, and adapter classes
 
 classDiagram
     %% ════════════════════════════════════════════════════════════════
-    %%  ZOD VALIDATION SCHEMAS
+    %%  ENTITY
     %% ════════════════════════════════════════════════════════════════
-    class RegisterSchema {
-        <<Zod Schema>>
-        +email: z.string().email()
-        +username?: z.string().min(3).max(20)
-        +password: z.string().min(8).max(20)
-    }
-
-    class LoginSchema {
-        <<Zod Schema>>
-        +email?: z.string().email()
-        +username?: z.string().min(3).max(20)
-        +password: z.string().min(8).max(20)
-    }
-
-    class RefreshTokenSchema {
-        <<Zod Schema>>
-        +refreshToken: z.string().jwt()
-    }
-
-    %% ════════════════════════════════════════════════════════════════
-    %%  DTOs (Inferred from Zod)
-    %% ════════════════════════════════════════════════════════════════
-    class RegisterDto {
-        <<DTO from Zod>>
-        +email: string
-        +password: string
-        +username: string
-    }
-
-    class LoginDto {
-        <<DTO from Zod>>
-        +email?: string
-        +username?: string
-        +password: string
-    }
-
-    class RefreshTokenDto {
-        <<DTO from Zod>>
-        +refreshToken: string
-    }
-
-    %% ════════════════════════════════════════════════════════════════
-    %%  RESPONSE / TRANSFORM TYPES
-    %% ════════════════════════════════════════════════════════════════
-    class TokenResponse {
-        <<Response Type>>
-        +accessToken: string
-        +refreshToken: string
-        +expiresIn: number
-    }
-
-    class TokenPair {
-        <<Internal Type>>
-        +accessToken: string
-        +refreshToken: string
-    }
-
-    class UserResponse {
-        <<Response Type>>
-        +id: string
-        +username: string
-        +email: string
-        +isVerified: boolean
-        +createdAt: Date
-    }
-
-    class ReduceBuilder {
-        <<Builder>>
-        -entity: Entity
-        -selectedFields: string[]
-        +select(...fields: string[]): ReduceBuilder
-        +execute(): Response
-    }
-
     class UserEntity {
         <<Entity>>
         +id: UUID
@@ -119,15 +45,6 @@ classDiagram
         +validateRefreshToken(token: string): Promise~boolean~
         +blacklistToken(token: string): Promise~void~
         +isBlacklisted(jti: string): Promise~boolean~
-    }
-
-    class ILoggerService {
-        <<Port Interface>>
-        +debug(message: string, context?: string): void
-        +info(message: string, context?: string): void
-        +warn(message: string, context?: string): void
-        +error(message: string, context?: string): void
-        +fatal(message: string, context?: string): void
     }
 
     %% ════════════════════════════════════════════════════════════════
@@ -186,36 +103,19 @@ classDiagram
     }
 
     %% ════════════════════════════════════════════════════════════════
-    %%  RELATIONSHIPS
+    %%  INTERFACE IMPLEMENTATIONS
     %% ════════════════════════════════════════════════════════════════
-
-    %% Schema to DTO (z.infer)
-    RegisterSchema ..> RegisterDto : z.infer
-    LoginSchema ..> LoginDto : z.infer
-    RefreshTokenSchema ..> RefreshTokenDto : z.infer
-
-    %% DTO usage
-    RegisterDto --> IAuthService : passed to
-    LoginDto --> IAuthService : passed to
-    RefreshTokenDto --> IAuthService : passed to
-
-    %% Interface implementation
     IAuthService <|.. AuthService
     IUserService <|.. UserService
     ITokenService <|.. TokenService
-    ILoggerService <|.. LoggerService
 
-    %% Service dependencies
+    %% ════════════════════════════════════════════════════════════════
+    %%  DEPENDENCIES
+    %% ════════════════════════════════════════════════════════════════
     AuthService --> IUserService : uses
     AuthService --> ITokenService : uses
     AuthService --> ILoggerService : logs to
 
-    %% Entity transformations
-    UserEntity ..> ReduceBuilder : reduce()
-    ReduceBuilder ..> UserResponse : select().execute()
-    TokenPair ..> TokenResponse : reduce()
-
-    %% Repository/Adapter dependencies
     UserService --> UserRepository : persists
     TokenService --> TokenRepository : persists
     TokenService --> RedisService : caches
