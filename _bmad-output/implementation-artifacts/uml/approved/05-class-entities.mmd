@@ -1,0 +1,51 @@
+%% Entity Architecture Diagram
+%% Maps to: FR-13, FR-14, FR-23, FR-24, FR-25
+%% Storage: PostgreSQL (entities), MongoDB (models), Redis (cache)
+
+erDiagram
+    %% PostgreSQL Entities
+    USERS {
+        UUID id PK
+        %% not null; 
+        VARCHAR username UK 
+        %% not null
+        VARCHAR email UK
+        VARCHAR password
+        BOOLEAN blocked
+        BOOLEAN is_deleted 
+        BOOLEAN is_verified
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    AUTH_TOKENS {
+        UUID user_id PK
+        VARCHAR refresh_token
+        TIMESTAMP refresh_token_expires_at
+        TIMESTAMP refresh_token_updated_at
+        VARCHAR reset_token
+        TIMESTAMP reset_token_expires_at
+        TIMESTAMP reset_token_updated_at
+    }
+
+    %% MongoDB Documents
+    USER_DEMOGRAPHICS {
+        UUID id PK
+        UUID user_id FK
+        VARCHAR last_ip
+        VARCHAR country
+        VARCHAR city
+        TIMESTAMP last_login
+    }
+
+    %% Redis Keys
+    TOKEN_BLACKLIST {
+        VARCHAR id PK
+        TIMESTAMP expires_at
+        UUID user_id
+        VARCHAR access_token
+    }
+
+    USERS ||--o| AUTH_TOKENS : "has one, on delete cascade"
+    USERS ||--o| USER_DEMOGRAPHICS : "has one"
+    USERS ||--o{ TOKEN_BLACKLIST : "can have many"
