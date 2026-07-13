@@ -1,0 +1,75 @@
+%% TreeView Diagram - Module Structure
+%% Maps to: Section 11.4 Folder Structure, Section 11.5 Internal Library Management
+%% Shows hierarchical package organization
+
+treeView-beta
+    src (AuthService)
+        Modules
+            auth
+                AuthModule
+                AuthController
+                AuthService
+                JwtAuthGuard
+            user
+                UserModule
+                UserController
+                UserService
+                UserEntity
+            token
+                TokenModule
+                TokenService
+                TokenEntity
+            logging
+                LoggingModule
+                LoggerService
+        Shared Utilities
+            decorators
+                RetryDecorator
+                CacheDecorator
+                LogDecorator
+            filters
+                HttpExceptionFilter
+                AllExceptionsFilter
+            guards
+                JwtAuthGuard
+                RolesGuard
+            interceptors
+                LoggingInterceptor
+                TimeoutInterceptor
+                TransformInterceptor
+            pipes
+                ValidationPipe
+            interfaces
+                IUserService
+                ITokenService
+            utils
+                HashUtil
+                UuidUtil
+        Configuration
+            env
+                EnvValidator
+            database
+                DatabaseConfig
+            context
+                AppContext
+        Database Layer
+            migrations
+                TypeOrmMigrations
+            seeds
+                DatabaseSeeds
+        Schema
+            entities
+                UserEntity
+                TokenEntity
+                SessionEntity
+            model
+                DemographicsModel
+                AuditLogModel
+                ActivityModel
+            cache
+                TokenCache
+                SessionCache
+                RateLimitCache
+                BlacklistCache
+        AppModule
+        Main

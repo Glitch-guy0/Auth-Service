@@ -38,6 +38,16 @@ graph TB
         LOG_SVC["LoggerService<br/>━━━━━━━━━━━━<br/>debug()<br/>info()<br/>warn()<br/>error()"]
     end
     
+    subgraph "Layer 6.1: Interface (Ports)"
+        I_AUTH["IAuthService<br/>━━━━━━━━━━━━<br/>register()<br/>login()<br/>refresh()<br/>logout()"]
+        I_USER["IUserService<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>create()<br/>update()"]
+        I_TOKEN["ITokenService<br/>━━━━━━━━━━━━<br/>generateTokenPair()<br/>validateRefreshToken()<br/>blacklistToken()"]
+        I_LOGGER["ILoggerService<br/>━━━━━━━━━━━━<br/>debug()<br/>info()<br/>warn()<br/>error()"]
+        I_USER_REPO["IUserRepository<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>create()<br/>update()"]
+        I_TOKEN_REPO["ITokenRepository<br/>━━━━━━━━━━━━<br/>findByToken()<br/>save()<br/>deleteExpired()"]
+        I_DEMO_REPO["IDemographicsRepository<br/>━━━━━━━━━━━━<br/>findByUserId()<br/>save()<br/>logDemographics()"]
+    end
+    
     subgraph "Layer 7: Repository & Utility (Data Access)"
         USER_REPO["UserRepository<br/>━━━━━━━━━━━━<br/>TypeORM Repository<br/>CRUD operations<br/>Query building"]
         TOKEN_REPO["TokenRepository<br/>━━━━━━━━━━━━<br/>TypeORM Repository<br/>Token management<br/>Expiry handling"]
@@ -104,6 +114,15 @@ graph TB
     REDIS_ADAPTER --> CACHE_PLUGIN
     MONGO_ADAPTER --> LOG_PLUGIN
     
+    AUTH_SVC -.-> I_AUTH
+    USER_SVC -.-> I_USER
+    TOKEN_SVC -.-> I_TOKEN
+    LOG_SVC -.-> I_LOGGER
+    
+    USER_REPO -.-> I_USER_REPO
+    TOKEN_REPO -.-> I_TOKEN_REPO
+    DEMO_REPO -.-> I_DEMO_REPO
+    
     style AUTH_CTRL fill:#E91E63,color:#fff
     style USER_CTRL fill:#E91E63,color:#fff
     
@@ -125,6 +144,14 @@ graph TB
     style USER_SVC fill:#FF9800,color:#fff
     style TOKEN_SVC fill:#FF9800,color:#fff
     style LOG_SVC fill:#FF9800,color:#fff
+    
+    style I_AUTH fill:#FFC107,color:#000
+    style I_USER fill:#FFC107,color:#000
+    style I_TOKEN fill:#FFC107,color:#000
+    style I_LOGGER fill:#FFC107,color:#000
+    style I_USER_REPO fill:#FFC107,color:#000
+    style I_TOKEN_REPO fill:#FFC107,color:#000
+    style I_DEMO_REPO fill:#FFC107,color:#000
     
     style USER_REPO fill:#795548,color:#fff
     style TOKEN_REPO fill:#795548,color:#fff

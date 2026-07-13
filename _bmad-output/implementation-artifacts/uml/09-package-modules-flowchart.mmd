@@ -1,0 +1,124 @@
+%% Flowchart Diagram - Module Dependencies
+%% Maps to: Section 11.4 Folder Structure, Section 11.5 Internal Library Management
+%% Shows dependency relationships between modules
+
+flowchart TD
+    %% Root
+    Main --> AppModule
+
+    %% AppModule to Feature Modules
+    AppModule --> AuthModule
+    AppModule --> UserModule
+    AppModule --> TokenModule
+    AppModule --> LoggingModule
+    AppModule --> EnvValidator
+    AppModule --> DatabaseConfig
+
+    %% Feature Module Dependencies
+    AuthModule --> UserModule
+    AuthModule --> TokenModule
+    AuthModule --> LoggingModule
+
+    UserModule --> LoggingModule
+    TokenModule --> LoggingModule
+
+    %% Feature Modules to Shared Utilities
+    AuthModule --> RetryDecorator
+    AuthModule --> HttpExceptionFilter
+    AuthModule --> JwtAuthGuard
+    AuthModule --> LoggingInterceptor
+    AuthModule --> ValidationPipe
+    AuthModule --> IUserService
+
+    UserModule --> RetryDecorator
+    UserModule --> HttpExceptionFilter
+    UserModule --> RolesGuard
+    UserModule --> IUserService
+    UserModule --> HashUtil
+
+    TokenModule --> RetryDecorator
+    TokenModule --> ITokenService
+    TokenModule --> HashUtil
+
+    LoggingModule --> RetryDecorator
+    LoggingModule --> IUserService
+
+    %% Feature Modules to Configuration
+    AuthModule --> EnvValidator
+    AuthModule --> DatabaseConfig
+    AuthModule --> AppContext
+
+    UserModule --> EnvValidator
+    UserModule --> DatabaseConfig
+    UserModule --> AppContext
+
+    TokenModule --> EnvValidator
+    TokenModule --> DatabaseConfig
+    TokenModule --> AppContext
+
+    LoggingModule --> EnvValidator
+    LoggingModule --> AppContext
+
+    %% Configuration to Database Layer
+    DatabaseConfig --> TypeOrmMigrations
+    DatabaseConfig --> DatabaseSeeds
+
+    %% Schema Layer
+    Schema --> Entities
+    Schema --> Models
+    Schema --> Cache
+
+    %% SQL Entities (TypeORM)
+    Entities --> UserEntity
+    Entities --> TokenEntity
+    Entities --> SessionEntity
+
+    %% NoSQL Models (Mongoose)
+    Models --> DemographicsModel
+    Models --> AuditLogModel
+    Models --> ActivityModel
+
+    %% Cache Schemas (Redis)
+    Cache --> TokenCache
+    Cache --> SessionCache
+    Cache --> RateLimitCache
+    Cache --> BlacklistCache
+
+    %% Feature Modules to Schema
+    AuthModule --> UserEntity
+    AuthModule --> TokenEntity
+    AuthModule --> TokenCache
+    AuthModule --> BlacklistCache
+
+    UserModule --> UserEntity
+    UserModule --> DemographicsModel
+    UserModule --> SessionCache
+
+    TokenModule --> TokenEntity
+    TokenModule --> TokenCache
+    TokenModule --> SessionCache
+    TokenModule --> BlacklistCache
+
+    LoggingModule --> AuditLogModel
+    LoggingModule --> ActivityModel
+
+    %% Styling
+    classDef featureModule fill:#4CAF50,color:#fff
+    classDef sharedUtil fill:#2196F3,color:#fff
+    classDef config fill:#FF9800,color:#fff
+    classDef database fill:#9C27B0,color:#fff
+    classDef root fill:#F44336,color:#fff
+    classDef schema fill:#00BCD4,color:#fff
+    classDef sqlEntity fill:#8BC34A,color:#fff
+    classDef nosqlModel fill:#009688,color:#fff
+    classDef cacheSchema fill:#FF5722,color:#fff
+
+    class AuthModule,UserModule,TokenModule,LoggingModule featureModule
+    class RetryDecorator,CacheDecorator,LogDecorator,HttpExceptionFilter,AllExceptionsFilter,JwtAuthGuard,RolesGuard,LoggingInterceptor,TimeoutInterceptor,TransformInterceptor,ValidationPipe,IUserService,ITokenService,HashUtil,UuidUtil sharedUtil
+    class EnvValidator,DatabaseConfig,AppContext config
+    class TypeOrmMigrations,DatabaseSeeds database
+    class AppModule,Main root
+    class Schema schema
+    class UserEntity,TokenEntity,SessionEntity sqlEntity
+    class DemographicsModel,AuditLogModel,ActivityModel nosqlModel
+    class TokenCache,SessionCache,RateLimitCache,BlacklistCache cacheSchema
