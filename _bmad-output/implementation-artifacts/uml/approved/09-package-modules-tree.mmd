@@ -1,6 +1,6 @@
 %% TreeView Diagram - Module Structure
 %% Maps to: Section 11.4 Folder Structure, Section 11.5 Internal Library Management
-%% Shows hierarchical package organization
+%% Shows hierarchical package organization with interfaces and types
 
 treeView-beta
     src (AuthService)
@@ -9,7 +9,6 @@ treeView-beta
                 AuthModule
                 AuthController
                 AuthService
-                JwtAuthGuard
             user
                 UserModule
                 UserController
@@ -22,7 +21,29 @@ treeView-beta
             logging
                 LoggingModule
                 LoggerService
-        Shared Utilities
+        lib
+            interfaces
+                IAuthService
+                IUserService
+                ITokenService
+                ILoggerService
+            types
+                schemas
+                    RegisterSchema
+                    LoginSchema
+                    RefreshTokenSchema
+                dto
+                    RegisterDto
+                    LoginDto
+                    RefreshTokenDto
+                response
+                    TokenResponse
+                    TokenPair
+                    UserResponse
+                builder
+                    ReduceBuilder
+                entity
+                    UserEntity
             decorators
                 RetryDecorator
                 CacheDecorator
@@ -39,9 +60,6 @@ treeView-beta
                 TransformInterceptor
             pipes
                 ValidationPipe
-            interfaces
-                IUserService
-                ITokenService
             utils
                 HashUtil
                 UuidUtil

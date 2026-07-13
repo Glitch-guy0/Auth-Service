@@ -11,7 +11,7 @@ sequenceDiagram
     participant PostgreSQL
 
     Client->>AuthController: POST /auth/v1/register
-    AuthController->>AuthController: Validate DTO (class-validator)
+    AuthController->>AuthController: Parse & Validate (RegisterSchema.parse)
     
     AuthController->>AuthService: register(dto)
     AuthService->>UserService: findByEmail(email)
@@ -34,7 +34,7 @@ sequenceDiagram
     KeyManager-->>TokenService: PrivateKey (cleared after use)
     
     TokenService->>TokenService: Sign access token (RSA)
-    Note right of TokenService: JWT payload: sub, role, iat, iss, kid, exp
+    Note right of TokenService: JWT payload: sub, iat, iss, kid, exp
     
     TokenService->>PostgreSQL: INSERT INTO refresh_token_keys
     PostgreSQL-->>TokenService: RefreshToken entity

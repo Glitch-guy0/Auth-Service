@@ -11,6 +11,7 @@ sequenceDiagram
 
     Client->>AuthController: POST /auth/v1/refresh
     AuthController->>AuthController: Extract refresh token from httpOnly cookie
+    AuthController->>AuthController: Parse & Validate (RefreshTokenSchema.parse)
     
     AuthController->>AuthService: refresh(refreshToken)
     
