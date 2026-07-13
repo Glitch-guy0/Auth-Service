@@ -1,0 +1,142 @@
+%% Component Diagram - Hexagonal Architecture (NestJS)
+%% Maps to: Section 11.4 Folder Structure, Hexagonal Architecture
+%% Request lifecycle: Controller → Middleware → Guard → Interceptor → Pipe → Service → Repository → Adapter → Plugin
+
+
+graph TB
+    subgraph "Layer 1: Controller (Entry Point)"
+        AUTH_CTRL["AuthController<br/>━━━━━━━━━━━━<br/>POST /register<br/>POST /authenticate<br/>POST /refresh<br/>POST /logout"]
+        USER_CTRL["UserController<br/>━━━━━━━━━━━━<br/>GET /users/:id<br/>PATCH /users/:id<br/>DELETE /users/:id"]
+    end
+    
+    subgraph "Layer 2: Middleware (Pre-Processing)"
+        LOG_MW["LoggingMiddleware<br/>━━━━━━━━━━━━<br/>Request logging<br/>Request ID"]
+        HELMET_MW["HelmetMiddleware<br/>━━━━━━━━━━━━<br/>Security headers<br/>CORS"]
+        COOKIE_MW["CookieMiddleware<br/>━━━━━━━━━━━━<br/>Cookie parsing<br/>Cookie signing"]
+    end
+    
+    subgraph "Layer 3: Guard (Authentication)"
+        JWT_GUARD["JwtAuthGuard<br/>━━━━━━━━━━━━<br/>Token validation<br/>User extraction"]
+        ROLE_GUARD["RolesGuard<br/>━━━━━━━━━━━━<br/>Role checking<br/>Permission validation"]
+    end
+    
+    subgraph "Layer 4: Interceptor (AOP Logic)"
+        LOG_INTERCEPT["LoggingInterceptor<br/>━━━━━━━━━━━━<br/>Request/Response logging<br/>Duration tracking"]
+        TIMEOUT_INTERCEPT["TimeoutInterceptor<br/>━━━━━━━━━━━━<br/>Request timeout<br/>Timeout handling"]
+        TRANSFORM_INTERCEPT["TransformInterceptor<br/>━━━━━━━━━━━━<br/>Response transformation<br/>Envelope wrapping"]
+    end
+    
+    subgraph "Layer 5: Pipe (Validation)"
+        VALIDATION_PIPE["ValidationPipe<br/>━━━━━━━━━━━━<br/>DTO validation<br/>Sanitization"]
+        PARSE_PIPE["ParseUUIDPipe<br/>━━━━━━━━━━━━<br/>UUID parsing<br/>Format validation"]
+    end
+    
+    subgraph "Layer 6: Service (Business Logic)"
+        AUTH_SVC["AuthService<br/>━━━━━━━━━━━━<br/>register()<br/>login()<br/>refresh()<br/>logout()"]
+        USER_SVC["UserService<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>create()<br/>update()"]
+        TOKEN_SVC["TokenService<br/>━━━━━━━━━━━━<br/>generateTokenPair()<br/>validateRefreshToken()<br/>blacklistToken()"]
+        LOG_SVC["LoggerService<br/>━━━━━━━━━━━━<br/>debug()<br/>info()<br/>warn()<br/>error()"]
+    end
+    
+    subgraph "Layer 7: Repository & Utility (Data Access)"
+        USER_REPO["UserRepository<br/>━━━━━━━━━━━━<br/>TypeORM Repository<br/>CRUD operations<br/>Query building"]
+        TOKEN_REPO["TokenRepository<br/>━━━━━━━━━━━━<br/>TypeORM Repository<br/>Token management<br/>Expiry handling"]
+        DEMO_REPO["DemographicsRepository<br/>━━━━━━━━━━━━<br/>Mongoose Repository<br/>Demographics logging<br/>Async writes"]
+        HASH_UTIL["HashUtil<br/>━━━━━━━━━━━━<br/>bcrypt.hash()<br/>bcrypt.compare()<br/>Password hashing"]
+        UUID_UTIL["UuidUtil<br/>━━━━━━━━━━━━<br/>UUID generation<br/>Format validation"]
+    end
+    
+    subgraph "Layer 8: Adapter (External Integrations)"
+        PG_ADAPTER["PostgreSQL Adapter<br/>━━━━━━━━━━━━<br/>Connection management<br/>Query execution<br/>Transaction handling"]
+        REDIS_ADAPTER["Redis Adapter<br/>━━━━━━━━━━━━<br/>Cache operations<br/>Blacklist management<br/>TTL handling"]
+        MONGO_ADAPTER["MongoDB Adapter<br/>━━━━━━━━━━━━<br/>Document storage<br/>Demographics logging<br/>Async writes"]
+        KEY_ADAPTER["KeyManager Adapter<br/>━━━━━━━━━━━━<br/>RSA key management<br/>Key rotation<br/>Private key clearing"]
+    end
+    
+    subgraph "Layer 9: Plugin (Optional Composite)"
+        DB_PLUGIN["DbConnectionPlugin<br/>━━━━━━━━━━━━<br/>Connection pooling<br/>Health checks<br/>Retry logic"]
+        CACHE_PLUGIN["CachePlugin<br/>━━━━━━━━━━━━<br/>Cache initialization<br/>Cache invalidation<br/>Cache warming"]
+        LOG_PLUGIN["LogPlugin<br/>━━━━━━━━━━━━<br/>Log rotation<br/>Log shipping<br/>Log aggregation"]
+    end
+    
+    AUTH_CTRL --> LOG_MW
+    AUTH_CTRL --> HELMET_MW
+    AUTH_CTRL --> COOKIE_MW
+    USER_CTRL --> LOG_MW
+    USER_CTRL --> HELMET_MW
+    
+    LOG_MW --> JWT_GUARD
+    COOKIE_MW --> JWT_GUARD
+    
+    JWT_GUARD --> ROLE_GUARD
+    
+    ROLE_GUARD --> LOG_INTERCEPT
+    ROLE_GUARD --> TIMEOUT_INTERCEPT
+    ROLE_GUARD --> TRANSFORM_INTERCEPT
+    
+    LOG_INTERCEPT --> VALIDATION_PIPE
+    TIMEOUT_INTERCEPT --> VALIDATION_PIPE
+    TRANSFORM_INTERCEPT --> VALIDATION_PIPE
+    
+    VALIDATION_PIPE --> AUTH_SVC
+    VALIDATION_PIPE --> PARSE_PIPE
+    VALIDATION_PIPE --> USER_SVC
+    PARSE_PIPE --> USER_SVC
+    
+    AUTH_SVC --> USER_SVC
+    AUTH_SVC --> TOKEN_SVC
+    AUTH_SVC --> LOG_SVC
+    AUTH_SVC --> DEMO_REPO
+    
+    USER_SVC --> USER_REPO
+    USER_SVC --> HASH_UTIL
+    USER_SVC --> DEMO_REPO
+    TOKEN_SVC --> TOKEN_REPO
+    TOKEN_SVC --> HASH_UTIL
+    
+    USER_REPO --> PG_ADAPTER
+    TOKEN_REPO --> PG_ADAPTER
+    TOKEN_REPO --> REDIS_ADAPTER
+    DEMO_REPO --> MONGO_ADAPTER
+    TOKEN_SVC --> KEY_ADAPTER
+    
+    PG_ADAPTER --> DB_PLUGIN
+    REDIS_ADAPTER --> CACHE_PLUGIN
+    MONGO_ADAPTER --> LOG_PLUGIN
+    
+    style AUTH_CTRL fill:#E91E63,color:#fff
+    style USER_CTRL fill:#E91E63,color:#fff
+    
+    style LOG_MW fill:#9C27B0,color:#fff
+    style HELMET_MW fill:#9C27B0,color:#fff
+    style COOKIE_MW fill:#9C27B0,color:#fff
+    
+    style JWT_GUARD fill:#2196F3,color:#fff
+    style ROLE_GUARD fill:#2196F3,color:#fff
+    
+    style LOG_INTERCEPT fill:#00BCD4,color:#fff
+    style TIMEOUT_INTERCEPT fill:#00BCD4,color:#fff
+    style TRANSFORM_INTERCEPT fill:#00BCD4,color:#fff
+    
+    style VALIDATION_PIPE fill:#4CAF50,color:#fff
+    style PARSE_PIPE fill:#4CAF50,color:#fff
+    
+    style AUTH_SVC fill:#FF9800,color:#fff
+    style USER_SVC fill:#FF9800,color:#fff
+    style TOKEN_SVC fill:#FF9800,color:#fff
+    style LOG_SVC fill:#FF9800,color:#fff
+    
+    style USER_REPO fill:#795548,color:#fff
+    style TOKEN_REPO fill:#795548,color:#fff
+    style DEMO_REPO fill:#795548,color:#fff
+    style HASH_UTIL fill:#795548,color:#fff
+    style UUID_UTIL fill:#795548,color:#fff
+    
+    style PG_ADAPTER fill:#607D8B,color:#fff
+    style REDIS_ADAPTER fill:#607D8B,color:#fff
+    style MONGO_ADAPTER fill:#607D8B,color:#fff
+    style KEY_ADAPTER fill:#607D8B,color:#fff
+    
+    style DB_PLUGIN fill:#F44336,color:#fff
+    style CACHE_PLUGIN fill:#F44336,color:#fff
+    style LOG_PLUGIN fill:#F44336,color:#fff
