@@ -2,17 +2,17 @@
 %% Maps to: Section 11.4 Folder Structure, Section 11.5 Internal Library Management
 %% Shows dependency relationships between modules
 
-flowchart TD
+flowchart LR
     %% Root
     Main --> AppModule
 
     %% AppModule to Feature Modules
-    AppModule --> AuthModule
-    AppModule --> UserModule
-    AppModule --> TokenModule
-    AppModule --> LoggingModule
-    AppModule --> EnvValidator
-    AppModule --> DatabaseConfig
+    subgraph FeatureModules [Feature Modules]
+        AppModule --> AuthModule
+        AppModule --> UserModule
+        AppModule --> TokenModule
+        AppModule --> LoggingModule
+    end
 
     %% Feature Module Dependencies
     AuthModule --> UserModule
@@ -21,6 +21,45 @@ flowchart TD
 
     UserModule --> LoggingModule
     TokenModule --> LoggingModule
+
+    %% Shared Utilities
+    subgraph SharedUtilities [Shared Utilities]
+        subgraph Decorators [decorators]
+            RetryDecorator
+            CacheDecorator
+            LogDecorator
+        end
+
+        subgraph Filters [filters]
+            HttpExceptionFilter
+            AllExceptionsFilter
+        end
+
+        subgraph Guards [guards]
+            JwtAuthGuard
+            RolesGuard
+        end
+
+        subgraph Interceptors [interceptors]
+            LoggingInterceptor
+            TimeoutInterceptor
+            TransformInterceptor
+        end
+
+        subgraph Pipes [pipes]
+            ValidationPipe
+        end
+
+        subgraph Interfaces [interfaces]
+            IUserService
+            ITokenService
+        end
+
+        subgraph Utils [utils]
+            HashUtil
+            UuidUtil
+        end
+    end
 
     %% Feature Modules to Shared Utilities
     AuthModule --> RetryDecorator
@@ -43,6 +82,21 @@ flowchart TD
     LoggingModule --> RetryDecorator
     LoggingModule --> IUserService
 
+    %% Configuration
+    subgraph Configuration [Configuration]
+        subgraph Env [env]
+            EnvValidator
+        end
+
+        subgraph Database [database]
+            DatabaseConfig
+        end
+
+        subgraph Context [context]
+            AppContext
+        end
+    end
+
     %% Feature Modules to Configuration
     AuthModule --> EnvValidator
     AuthModule --> DatabaseConfig
@@ -59,30 +113,42 @@ flowchart TD
     LoggingModule --> EnvValidator
     LoggingModule --> AppContext
 
+    %% Database Layer
+    subgraph DatabaseLayer [Database Layer]
+        subgraph Migrations [migrations]
+            TypeOrmMigrations
+        end
+
+        subgraph Seeds [seeds]
+            DatabaseSeeds
+        end
+    end
+
     %% Configuration to Database Layer
     DatabaseConfig --> TypeOrmMigrations
     DatabaseConfig --> DatabaseSeeds
 
     %% Schema Layer
-    Schema --> Entities
-    Schema --> Models
-    Schema --> Cache
+    subgraph Schema [Schema]
+        subgraph Entities [entities]
+            UserEntity
+            TokenEntity
+            SessionEntity
+        end
 
-    %% SQL Entities (TypeORM)
-    Entities --> UserEntity
-    Entities --> TokenEntity
-    Entities --> SessionEntity
+        subgraph Models [model]
+            DemographicsModel
+            AuditLogModel
+            ActivityModel
+        end
 
-    %% NoSQL Models (Mongoose)
-    Models --> DemographicsModel
-    Models --> AuditLogModel
-    Models --> ActivityModel
-
-    %% Cache Schemas (Redis)
-    Cache --> TokenCache
-    Cache --> SessionCache
-    Cache --> RateLimitCache
-    Cache --> BlacklistCache
+        subgraph CacheSchemas [cache]
+            TokenCache
+            SessionCache
+            RateLimitCache
+            BlacklistCache
+        end
+    end
 
     %% Feature Modules to Schema
     AuthModule --> UserEntity
