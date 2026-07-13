@@ -1,5 +1,5 @@
-# Service Class Diagram
-# Maps to: Hexagonal Architecture, Ports & Adapters
+%% Service Class Diagram
+%% Maps to: Hexagonal Architecture, Ports & Adapters
 
 classDiagram
     class IAuthService {
@@ -84,7 +84,6 @@ classDiagram
         +getPrivateKey(): PrivateKey
         +getPublicKey(): PublicKey
         +getCurrentKid(): string
-        +rotateKeys(): Promise~void~
         -loadKeys(): void
         -clearPrivateKey(): void
     }
