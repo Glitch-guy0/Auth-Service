@@ -1,360 +1,880 @@
 ---
-stepsCompleted:
-  - "Step 1: Validate Prerequisites and Extract Requirements"
-  - "Step 2: Design Epic List"
-  - "Step 3: Generate Epics and Stories"
-  - "Step 4: Final Validation"
+stepsCompleted: ['step-01-validate-prerequisites', 'step-02-design-epics']
 inputDocuments:
-  - "_bmad-output/planning-artifacts/prds/prd-AuthService-2026-07-12/prd.md"
-  - "_bmad-output/planning-artifacts/architecture.md"
+  - _bmad-output/planning-artifacts/prds/prd-AuthService-2026-07-12/prd.md
+  - _bmad-output/planning-artifacts/architecture.md
 ---
 
 # AuthService - Epic Breakdown
 
 ## Overview
 
-This document provides the complete epic and story breakdown for AuthService, decomposing the requirements from the PRD, UX Design if it exists, and Architecture requirements into implementable stories.
+Epics are organized as **complete vertical flows** — each epic delivers a working, testable feature from controller to database. Implementation follows a two-phase approach:
+1. **Phase A (Epic 1-2)**: Foundation — file structure, types, interfaces, key management
+2. **Phase B (Epic 3-7)**: Auth flows — each flow is a complete vertical slice
+3. **Phase C (Epic 8-9)**: Cross-cutting — logging, testing, documentation
 
 ## Requirements Inventory
 
 ### Functional Requirements
 
-FR-1: User Registration - POST /auth/v1/register creates accounts with username, email, and password. Returns HTTP 201 with access token on success. Hashed with bcrypt (cost=10) before storage.
-FR-2: User Login - POST /auth/v1/authenticate verifies credentials, returns access token, sets secure httpOnly refresh token cookie. Returns HTTP 200 on success.
-FR-3: Token Refresh - POST /auth/v1/refresh rotates access/refresh tokens.
-FR-4: User Logout - POST /auth/v1/logout clears cookies, deletes refresh token in DB, blacklists access token in Redis.
-FR-5: JWT Token Generation - RSA signed access token with kid, sub, iat, iss, exp, user_id.
-FR-6: Refresh Token Rotation - Rotates refresh token on every refresh request, invalidating/updating PostgreSQL hash.
-FR-7: Key Management - Dynamic RSA key pair retrieval and validation through KeyManager registry.
-FR-8: Rate Limiting - Prevent brute force on login; returns HTTP 429 when limits exceeded.
-FR-9: Password Reset - Token-based password reset flow (1 hour expiry, in-memory tokens only, no email in v1).
-FR-10: Email Verification - Verification flow (deferred/stubbed for v1).
-FR-11: Input Validation - Validate incoming payloads using Zod schemas; reject invalid inputs with proper validation errors.
-FR-12: Security Headers - Inject standard security headers (Helmet, CORS) via middleware.
-FR-13: User Entity - Stores core attributes in PostgreSQL USERS table.
-FR-14: User Lookup - Lookup users by UUID, username, or email.
-FR-15: User Blocking - Prevent blocked users from authenticating or refreshing.
-FR-16: Structured Logging - Basic logging framework using pino.
-FR-17: Request Logging - Log HTTP request details and duration using pino middleware/interceptor.
-FR-18: User Demographics Logging - Asynchronously write IP and country/city demographics to MongoDB on auth events.
-FR-19: Development Setup - Run development server via npm run start:dev.
-FR-20: Documentation - 100% documentation coverage of setup and APIs.
-FR-21: Testing - Unit tests run via npm run test, integration via npm run test:e2e.
-FR-22: Build & Deployment - Compile production bundle via npm run build, start production server, provide Docker Compose config.
-FR-23: PostgreSQL Schema - PostgreSQL tables for users, auth_tokens (one-to-one with user_id as PK), and public_key_registry.
-FR-24: MongoDB Collection - MongoDB user_demographics, audit_log, and activity collections.
-FR-25: Redis Cache - Redis for token blacklisting (blacklist:token TTL) and rate limiting.
+FR1: User Registration — System can create new user accounts with username, email, and password
+FR2: User Login — System can authenticate users with username/email and password
+FR3: Token Refresh — System can issue new access tokens using refresh tokens
+FR4: User Logout — System can invalidate tokens and clear sessions
+FR5: JWT Token Generation — System generates RSA-signed JWT access tokens
+FR6: Refresh Token Rotation — System rotates refresh tokens on each use
+FR7: Key Management — System manages RSA key pairs for JWT signing
+FR8: Rate Limiting — System limits request rate per IP/endpoint
+FR9: Password Reset — System supports secure password reset flow
+FR10: Email Verification — System verifies user email addresses
+FR11: Input Validation — System validates all input data
+FR12: Security Headers — System sets appropriate security headers
+FR13: User Entity — System maintains user records with required fields
+FR14: User Lookup — System can find users by email or username
+FR15: User Blocking — System can block/unblock user accounts
+FR16: Structured Logging — System logs structured events with levels
+FR17: Request Logging — System logs HTTP requests and responses
+FR18: User Demographics Logging — System logs user demographics to MongoDB
+FR19: Development Setup — System provides easy development setup
+FR20: Documentation — System has comprehensive documentation
+FR21: Testing — System has unit and integration tests
+FR22: Build & Deployment — System has production build and deployment scripts
+FR23: PostgreSQL Schema — System maintains core data in PostgreSQL
+FR24: MongoDB Collection — System logs demographics to MongoDB
+FR25: Redis Cache — System uses Redis for token blacklisting
 
 ### NonFunctional Requirements
 
-NFR-1: Performance / Speed - Response times should be secure (use of bcrypt cost=10 is mandatory even if it adds CPU latency).
-NFR-2: Scalability - Hexagonal architecture to support future addition of social login (Google, GitHub) or MFA without core refactoring.
-NFR-3: Service Reliability - Authentication success rate must be > 99.9% (SM-1).
-NFR-4: Token Refresh Reliability - Token refresh success rate must be > 99.9% (SM-2).
-NFR-5: Setup Simplicity - Local environment setup must complete in < 5 minutes (SM-3).
-NFR-6: Test Coverage - Maintain > 80% test coverage (SM-5).
-NFR-7: Security Compliance - Zero critical security vulnerabilities (SM-6), secure httpOnly cookies, strict SameSite settings, and dynamic RSA key rotation.
+NFR1: Security — Passwords bcrypt hashed (cost=10), private key cleared from memory after use
+NFR2: Performance — Token refresh uses O(1) query by user_id (not scanning all tokens)
+NFR3: Reliability — Graceful fallback for MongoDB (optional connection)
+NFR4: Maintainability — Hexagonal architecture for future OAuth support
+NFR5: Observability — Structured logging with pino + chalk, log levels supported
+NFR6: Type Safety — TypeScript strict mode enabled
+NFR7: Validation — Zod for input validation (not class-validator)
 
 ### Additional Requirements
 
-- **Hexagonal Architecture:** The codebase must be organized into strict hexagonal layers: Controller (Layer 1), Middleware (Layer 2), Guard (Layer 3), Interceptor (Layer 4), Pipe (Layer 5), Service (Layer 6), Interface/Ports (Layer 6.1), Repository (Layer 7), Adapter (Layer 8), and Plugin (Layer 9).
-- **Single Session Constraint:** Exactly one active refresh token session is allowed per user. Enforced by setting `user_id` as the Primary Key of the PostgreSQL `auth_tokens` table.
-- **Key Rotation Support:** Keys are rotated dynamically using a KeyID (`kid`) lookup. The public keys are stored in `PUBLIC_KEY_REGISTRY` table.
-- **Asynchronous Analytical Logging:** Writing analytics and user demographics to MongoDB must be decoupled from the core transaction and handled asynchronously so it does not block user authentication response.
-- **Error Handling Pipeline:** Use of standard NestJS exceptions filters (`HttpExceptionFilter`, `AllExceptionsFilter`) extending a `BaseAuthException` abstract class to return standard JSON error structures containing unique error codes.
+- Hexagonal Architecture with Ports & Adapters pattern
+- Module Lifecycle: setup() → run() → shutdown() for each NestJS module
+- Per-instance RSA key pairs (private key never in DB, cleared from memory after use)
+- Hybrid database: PostgreSQL (core) + MongoDB (logging) + Redis (blacklist)
+- TypeORM for PostgreSQL — mature, good NestJS integration, supports UUID
+- Zod for input validation — runtime validation with TypeScript type inference
+- Path aliases via package.json imports field
+- Swagger/NestJS plugin for API documentation
+- UML diagrams as reference for implementation
 
 ### UX Design Requirements
 
-*None (This is a backend-only HTTP API service)*
+No UX design document exists — this is a backend API service.
 
-### FR Coverage Map
+## Epic Flow
 
-FR-1: Epic 1 - User Registration flow saving to USERS and returning JWT and refresh cookie.
-FR-2: Epic 1 - User Authentication flow verifying bcrypt password hash and returning tokens.
-FR-3: Epic 1 - Token Refresh flow rotating refresh token cookie and returning new pair.
-FR-4: Epic 1 - User Logout flow clearing cookies, deleting refresh token and triggering blacklist.
-FR-5: Epic 1 - RSA-signed JWT generation for access tokens.
-FR-6: Epic 1 - Refresh Token Rotation updating PostgreSQL `auth_tokens` database.
-FR-7: Epic 1 - KeyManager registry for RSA keys.
-FR-8: Epic 2 - Rate Limiting to prevent brute force on login.
-FR-9: Epic 2 - In-memory token-based password reset flow (no email).
-FR-10: Epic 2 - Email Verification flow (stubbed/in-memory).
-FR-11: Epic 2 - Input validation using Zod schemas at controller entry points.
-FR-12: Epic 2 - Helmet and CORS security headers.
-FR-13: Epic 1 - USERS database entity mapping with uuid, email, username, blocked status.
-FR-14: Epic 1 - User lookup operations in UserService.
-FR-15: Epic 2 - Rejection of authenticated requests if a user is blocked.
-FR-16: Epic 3 - Base structured logging using Pino.
-FR-17: Epic 3 - Request logging middleware/interceptor.
-FR-18: Epic 3 - Asynchronous Demographics Logging to MongoDB.
-FR-19: Epic 1 - Local development setup and script configuration.
-FR-20: Epic 4 - Project documentation (README, guides).
-FR-21: Epic 4 - Automated unit and integration testing setup.
-FR-22: Epic 4 - Production build and Docker Compose configuration.
-FR-23: Epic 1 - PostgreSQL database schema (`users`, `auth_tokens`, `public_key_registry`).
-FR-24: Epic 3 - MongoDB collections config (Mongoose demographics models).
-FR-25: Epic 2 - Redis token blacklist management and validation check in JwtAuthGuard.
+```
+Epic 1: Foundation & Types
+    ↓ (all types defined)
+Epic 2: Key Management
+    ↓ (RSA keys ready for JWT)
+Epic 3: Registration Flow
+    ↓ (users can sign up)
+Epic 4: Login Flow
+    ↓ (users can authenticate)
+Epic 5: Token Refresh Flow
+    ↓ (sessions can be maintained)
+Epic 6: Logout Flow
+    ↓ (sessions can be terminated)
+Epic 7: Auth Guard & Protected Routes
+    ↓ (routes can be protected)
+Epic 8: Logging & Observability
+    ↓ (system is observable)
+Epic 9: Testing & Documentation
+    ↓ (system is production-ready)
+```
 
 ## Epic List
 
-### Epic 1: Core Authentication & Sessions
-Provide user registration, login, token refresh, and logout capabilities. Enforce a single session constraint via PostgreSQL auth_tokens where user_id is the primary key. Sign JWTs statelessly with RSA keys retrieved from KeyManager.
-**FRs covered:** FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-13, FR-14, FR-19, FR-23
-
-### Epic 2: Security Hardening & Rate Limiting
-Protect the auth endpoints with rate limiting, input validation via Zod schemas, secure HTTP headers, user blocking interceptors, in-memory password resets, and access token blacklisting in Redis with TTL validation in JwtAuthGuard.
-**FRs covered:** FR-8, FR-9, FR-10, FR-11, FR-12, FR-15, FR-25
-
-### Epic 3: Logging & Analytical Demographics
-Asynchronously capture user IP and geolocation demographics in MongoDB on auth events. Log HTTP requests and durations via interceptors using Pino, and format base exceptions.
-**FRs covered:** FR-16, FR-17, FR-18, FR-24
-
-### Epic 4: Testing & Production Deployment
-Provide production builds, start scripts, Docker Compose environments, and comprehensive automated test suites (unit and end-to-end integration tests).
-**FRs covered:** FR-20, FR-21, FR-22
+| Epic | Title | Deliverable |
+|------|-------|-------------|
+| 1 | Foundation & Types | Project setup, all types, interfaces, entities |
+| 2 | Key Management | RSA key generation, KeyManager service |
+| 3 | Registration Flow | POST /auth/v1/register — complete vertical slice |
+| 4 | Login Flow | POST /auth/v1/authenticate — complete vertical slice |
+| 5 | Token Refresh Flow | POST /auth/v1/refresh — complete vertical slice |
+| 6 | Logout Flow | POST /auth/v1/logout — complete vertical slice |
+| 7 | Auth Guard & Protected Routes | Guards, middleware, exception filters |
+| 8 | Logging & Observability | Structured logging, request logging, demographics |
+| 9 | Testing & Documentation | Unit tests, integration tests, docs, Docker |
 
 ---
 
-## Epic 1: Core Authentication & Sessions
+## Epic 1: Foundation & Types
 
-Decompose the registration, login, token refresh, and logout flows into actionable stories using PostgreSQL as the relational backend. Enforces the single active session constraint.
+**Goal:** Establish project scaffolding, all type definitions, interfaces, and entities. No business logic — just the skeleton.
 
-### Story 1.1: Project Scaffolding & Initial Configuration
-As a developer,  
-I want to initialize the NestJS repository with typescript configuration, package dependencies, environment validation, and core module scaffolding,  
-So that I can begin implementing features in a clean, standard hexagonal structure.
+**Depends on:** Nothing
 
-**Acceptance Criteria:**
-*   **Given** a clean Node.js 22 runtime environment  
-*   **When** I run `npm install` and define `.env` variables  
-*   **Then** the environment validator must verify all required variables (DATABASE_URL, MONGODB_URL, REDIS_URL, JWT_ACCESS_EXPIRY, etc.)  
-*   **And** `npm run start:dev` must boot the server successfully on the target port.
+### Story 1.1: NestJS Project Initialization
 
-### Story 1.2: PostgreSQL Database Schema Setup
-As a developer,  
-I want to create migrations and TypeORM configurations for core entities (users, auth_tokens, public_key_registry),  
-So that the database schema is provisioned with correct keys and foreign constraints.
+As a developer,
+I want a properly initialized NestJS project with all dependencies,
+So that I can start building features on a solid foundation.
 
 **Acceptance Criteria:**
-*   **Given** an active connection to PostgreSQL  
-*   **When** I run TypeORM migrations (`npm run migration:run`)  
-*   **Then** tables `users`, `auth_tokens`, and `public_key_registry` must be created.  
-*   **And** the `auth_tokens` table must use `user_id` as its Primary Key (enforcing the single session constraint).  
-*   **And** the `users` table must use UUID v4 values for identifiers.
 
-### Story 1.3: KeyManager & RSA Key Management
-As a developer,  
-I want to establish the KeyManager adapter to load, cache, and rotate RSA keys,  
-So that access tokens can be signed and verified using secure asymmetric cryptography.
+**Given** the project repository
+**When** I run `npm install`
+**Then** all dependencies are installed without errors
 
-**Acceptance Criteria:**
-*   **Given** a request to sign an access token  
-*   **When** the KeyManager is initialized  
-*   **Then** it must retrieve the current private key, sign the JWT, and immediately clear the private key from memory.  
-*   **And** it must write the corresponding public key to `public_key_registry` with a unique Key ID (`kid`).
+**Given** the project
+**When** I check `package.json`
+**Then** it contains all required dependencies (NestJS, TypeORM, jose, bcrypt, pino, zod)
+**And** scripts are defined (start:dev, build, test, test:e2e, lint, setup:keys, db:migrate, db:seed)
 
-### Story 1.4: User Registration Flow
-As a new user,  
-I want to submit email, username, and password to `/auth/v1/register`,  
-So that a secure account is created and I receive my initial session tokens.
+### Story 1.2: TypeScript Configuration
+
+As a developer,
+I want strict TypeScript configuration with path aliases,
+So that the codebase is type-safe and imports are clean.
 
 **Acceptance Criteria:**
-*   **Given** unique email and username values  
-*   **When** I POST to `/auth/v1/register`  
-*   **Then** the system must hash the password using bcrypt (cost=10).  
-*   **And** insert a new row in the `users` table.  
-*   **And** generate and return a JWT access token in the response body.  
-*   **And** store the bcrypt-hashed refresh token in the `auth_tokens` table.
 
-### Story 1.5: User Login Flow
-As a user,  
-I want to log in using `/auth/v1/authenticate` with username/email and password,  
-So that my identity is verified and my session cookie is set.
+**Given** the project
+**When** I check `tsconfig.json`
+**Then** strict mode is enabled (`"strict": true`)
+**And** path aliases are configured (`@shared/*`, `@modules/*`, `@config/*`, `@database/*`)
+**And** baseUrl is set to `"."`
 
-**Acceptance Criteria:**
-*   **Given** a user is active and registered  
-*   **When** I POST valid credentials to `/auth/v1/authenticate`  
-*   **Then** the system must verify the credentials via bcrypt comparison.  
-*   **And** return a JWT access token in the response body.  
-*   **And** set a secure, httpOnly, sameSite=strict cookie containing the refresh token.
+### Story 1.3: Environment Configuration
 
-### Story 1.6: Token Refresh Rotation Flow
-As an authenticated user,  
-I want to send my refresh token cookie to `/auth/v1/refresh`,  
-So that my access token is rotated without needing to prompt me for credentials.
+As a developer,
+I want validated environment configuration,
+So that the application starts only when all required variables are present.
 
 **Acceptance Criteria:**
-*   **Given** a valid refresh token cookie  
-*   **When** I POST to `/auth/v1/refresh`  
-*   **Then** the system must retrieve the stored hash from PostgreSQL and run bcrypt comparison.  
-*   **And** issue a fresh RSA-signed access token.  
-*   **And** rotate the refresh token, saving the new hash to PostgreSQL `auth_tokens` (updating the single record).  
-*   **And** set the new cookie.
 
-### Story 1.7: User Logout Flow
-As a logged-in user,  
-I want to trigger `/auth/v1/logout` to clear my active session,  
-So that my tokens are immediately revoked.
+**Given** the project
+**When** I check `src/config/env.validator.ts`
+**Then** it validates all required environment variables (DATABASE_URL, MONGODB_URL, REDIS_URL, JWT_ACCESS_EXPIRY, JWT_REFRESH_EXPIRY, BCRYPT_COST, PORT, NODE_ENV)
+**And** it throws descriptive errors for missing/invalid variables
+
+**Given** `.env.example`
+**When** I copy it to `.env`
+**Then** all variables are documented with descriptions and default values
+
+### Story 1.4: AppContext Global State
+
+As a developer,
+I want a global AppContext for sharing config and services across modules,
+So that modules can access shared resources without circular dependencies.
 
 **Acceptance Criteria:**
-*   **Given** a user has an active session  
-*   **When** I POST to `/auth/v1/logout`  
-*   **Then** the system must delete the corresponding refresh token row in PostgreSQL `auth_tokens` (removing the active session).  
-*   **And** clear the refresh token cookie on the HTTP response.
+
+**Given** the project
+**When** I check `src/config/app-context.ts`
+**Then** AppContext interface is defined with logManager, config, and other shared services
+**And** AppContext is a singleton that modules can import
+
+### Story 1.5: NestJS App Module Structure
+
+As a developer,
+I want the root AppModule with proper module imports,
+So that the application boots correctly.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check `src/app.module.ts`
+**Then** it imports ConfigModule, AuthModule, UserModule, TokenModule, LoggingModule
+**And** it uses global validation pipe
+**And** it registers the global exception filter
+
+**Given** the project
+**When** I check `src/main.ts`
+**Then** it bootstraps NestJS with AppModule
+**And** it sets up Swagger documentation
+**And** it listens on the configured PORT
+
+### Story 1.6: User Entity Definition
+
+As a developer,
+I want the User entity defined with all fields and relationships,
+So that database operations have type safety.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check `src/modules/user/user.entity.ts`
+**Then** User entity has fields: id (UUID), username (string, unique), email (string, unique), password (string), blocked (boolean), is_verified (boolean), created_at (timestamp), updated_at (timestamp)
+**And** username and email have unique constraints
+
+### Story 1.7: Auth Token Entity Definition
+
+As a developer,
+I want the AuthToken entity defined for refresh token storage,
+So that token operations have type safety.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the token entity file
+**Then** AuthToken entity has fields: user_id (UUID PK, FK to users), token_hash (string), expires_at (timestamp), updated_at (timestamp)
+**And** user_id is primary key (one row per user)
+**And** ON DELETE CASCADE is configured
+
+### Story 1.8: Public Key Registry Entity
+
+As a developer,
+I want the PublicKeyRegistry entity for key management,
+So that JWT verification can find the correct public key.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the key entity file
+**Then** PublicKeyRegistry entity has fields: kid (UUID PK), public_key (text), created_at (timestamp), expires_at (timestamp)
+**And** kid is UUID v7
+
+### Story 1.9: Demographics Document (MongoDB)
+
+As a developer,
+I want the Demographics document type for MongoDB logging,
+So that demographics logging has type safety.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the demographics entity file
+**Then** Demographics document has fields: user_id (UUID), last_ip (string), location (object with country, city), created_at (Date)
+**And** it uses MongoDB collection user_demographics
+
+### Story 1.10: DTOs — Register & Login
+
+As a developer,
+I want Zod schemas for registration and login validation,
+So that input is validated before reaching service logic.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check `src/modules/auth/dto/register.dto.ts`
+**Then** RegisterSchema is defined with z.object({
+  username: z.string().min(3),
+  email: z.string().email(),
+  password: z.string().min(8)
+})
+**And** the schema infers the TypeScript type (z.infer<typeof RegisterSchema>)
+**And** the schema is exported for use in controller
+
+**Given** the project
+**When** I check `src/modules/auth/dto/login.dto.ts`
+**Then** LoginSchema is defined with z.object({
+  usernameOrEmail: z.string(),
+  password: z.string()
+})
+**And** the schema infers the TypeScript type
+
+### Story 1.11: DTOs — Token Response
+
+As a developer,
+I want Zod schema for token responses,
+So that API responses have consistent structure.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the token DTOs
+**Then** TokenResponseSchema is defined with z.object({
+  accessToken: z.string(),
+  expiresIn: z.number()
+})
+**And** the schema infers the TypeScript type
+
+### Story 1.12: Service Interfaces (Ports)
+
+As a developer,
+I want interfaces for all services (hexagonal ports),
+So that implementations are swappable and testable.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the service interfaces
+**Then** IAuthService interface exists with methods: register, login, refresh, logout
+**And** IUserService interface exists with methods: findByEmail, findByUsername, create, logDemographics
+**And** ITokenService interface exists with methods: generateTokenPair, storeToken, verifyAccessToken
+**And** IKeyManager interface exists with methods: getPublicKey, getPrivateKey
+
+### Story 1.13: Exception Hierarchy
+
+As a developer,
+I want the complete exception hierarchy defined,
+So that error handling is consistent across the application.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the exception files
+**Then** BaseAuthException exists as the root
+**And** AuthenticationException (401) with subclasses: InvalidCredentialsException, TokenExpiredException, TokenRevokedException, TokenInvalidSignatureException
+**And** AuthorizationException (403) with subclass: UserBlockedException
+**And** ValidationException (400) with subclasses: UserExistsException
+**And** each exception has an error code (AUTH_*, TOKEN_*, VALIDATION_*)
+
+### Story 1.14: Transaction Pattern
+
+As a developer,
+I want the Transaction pattern defined (createTransaction/discard),
+So that database operations are properly wrapped.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the transaction file
+**Then** createTransaction(callback) function is defined
+**And** callback receives self-contained tx object
+**And** auto-commits on success, auto-rollbacks + rethrows on error
+**And** discard() is available for explicit cleanup
+
+### Story 1.15: JWT Payload Type
+
+As a developer,
+I want the JwtPayload interface defined,
+So that JWT operations have type safety.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the JWT types
+**Then** JwtPayload has fields: sub (string, user_id), iat (number), iss (string), kid (string), exp (number)
+**And** role field has TODO comment for Phase 4 RBAC
+
+### Story 1.16: API Response Types
+
+As a developer,
+I want standardized API response types,
+So that all endpoints return consistent response shapes.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check the shared types
+**Then** SuccessResponse<T> type exists with success (true) and data (T)
+**And** ErrorResponse type exists with success (false) and error (code, message, timestamp, path)
 
 ---
 
-## Epic 2: Security Hardening & Rate Limiting
+## Epic 2: Key Management
 
-Secure the application layers using guards, filters, interceptors, and Redis storage.
+**Goal:** Implement RSA key generation and KeyManager service. This must work before any JWT signing.
 
-### Story 2.1: Input Validation with Zod
-As an API consumer,  
-I want incoming HTTP payloads validated against schemas,  
-So that malformed requests are rejected immediately with structured error codes.
+**Depends on:** Epic 1 (types, entities defined)
 
-**Acceptance Criteria:**
-*   **Given** a client payload to register or login  
-*   **When** properties fail to match the Zod schema (`RegisterSchema` or `LoginSchema`)  
-*   **Then** the system must reject the request with HTTP 400 Bad Request.  
-*   **And** return a structured JSON response with `code: VALIDATION_ERROR` (or specific sub-codes like `VALIDATION_EMAIL`).
+### Story 2.1: Key Generation Script
 
-### Story 2.2: Rate Limiting Guard
-As a system administrator,  
-I want to rate-limit requests to auth endpoints using a Redis back-end,  
-So that brute force and DDoS attempts are blocked.
+As a developer,
+I want a setup script that generates RSA key pairs,
+So that JWT signing works without manual key generation.
 
 **Acceptance Criteria:**
-*   **Given** a client calling login or register endpoints  
-*   **When** request volume exceeds the maximum threshold within a window  
-*   **Then** Redis must increment the request bucket count.  
-*   **And** block subsequent requests, returning HTTP 429 Too Many Requests with `code: RATE_LIMIT_EXCEEDED`.
 
-### Story 2.3: Security Headers and CORS
-As a system architect,  
-I want to configure Helmet middleware and CORS rules on the NestJS app,  
-So that browser clients can safely interact with endpoints without cross-site scripting vulnerabilities.
+**Given** the project
+**When** I run `npm run setup:keys`
+**Then** `keys.json` is created with kid (UUID v7), publicKey, privateKey, createdAt, expiresAt
+**And** file permissions are set to 600 (owner read/write only)
+**And** platform architecture and OS are recorded
+**And** time to complete is measured and stored
 
-**Acceptance Criteria:**
-*   **Given** a client requesting resources from the server  
-*   **When** headers are generated by the app  
-*   **Then** standard security headers (XSS, Frame Options, HSTS) must be present.  
-*   **And** CORS origins must be validated against whitelist configuration.
+**Given** `keys.json` exists
+**When** I run `npm run setup:keys` again
+**Then** it does not overwrite existing keys (or warns before overwriting)
 
-### Story 2.4: User Blocking Guard
-As an administrator,  
-I want authentication requests from blocked users to be rejected immediately,  
-So that unauthorized access is suspended.
+### Story 2.2: KeyManager Service
+
+As a developer,
+I want the KeyManager service to read RSA keys from keys.json,
+So that JWT signing and verification works.
 
 **Acceptance Criteria:**
-*   **Given** a user account with `blocked: true` in the database  
-*   **When** the user attempts to log in or refresh their token  
-*   **Then** the service must check `user.blocked` and throw `UserBlockedException`.  
-*   **And** return HTTP 403 Forbidden with `code: AUTH_USER_BLOCKED`.
 
-### Story 2.5: Access Token Blacklisting in Redis
-As a security engineer,  
-I want logged-out access tokens cached in Redis as blacklisted until their expiry,  
-So that they cannot be re-used to access protected endpoints.
+**Given** keys.json exists
+**When** KeyManager.getPublicKey(kid) is called
+**Then** it reads the public key for the specified kid
+**And** returns the public key as a string
 
-**Acceptance Criteria:**
-*   **Given** a user successfully logs out  
-*   **When** the access token is decoded for remaining expiry TTL  
-*   **Then** the token must be saved to Redis with a `blacklist:` prefix and key TTL.  
-*   **And** the `JwtAuthGuard` must check Redis on every protected request and return HTTP 401 Unauthorized if found.
+**Given** keys.json exists
+**When** KeyManager.getPrivateKey() is called
+**Then** it reads the private key from file
+**And** clears the key from memory after use
 
-### Story 2.6: In-Memory Password Reset Flow
-As a user who forgot my password,  
-I want to submit my email and reset my password using a token,  
-So that I can recover my account securely without external email dependencies.
+### Story 2.3: KeyManager Module Registration
+
+As a developer,
+I want KeyManager registered in the NestJS module system,
+So that it can be injected into other services.
 
 **Acceptance Criteria:**
-*   **Given** a registered user email  
-*   **When** I request a password reset  
-*   **Then** the system must generate a reset token (1 hour expiry) stored in-memory, returning it in the API response.  
-*   **And** update the password in PostgreSQL when the valid token is submitted with a new password.
+
+**Given** the project
+**When** I check the module registration
+**Then** KeyManager is provided in the appropriate module
+**And** it can be injected via @Inject(IKeyManager)
 
 ---
 
-## Epic 3: Logging & Analytical Demographics
+## Epic 3: Registration Flow
 
-Capture demographics and request details asynchronously in MongoDB.
+**Goal:** Implement complete user registration — POST /auth/v1/register. Users can create accounts.
 
-### Story 3.1: Structured Logging with Pino
-As a system administrator,  
-I want all application logs formatted as JSON with structured metadata,  
-So that they can be easily aggregated and searched.
+**Depends on:** Epic 1 (types), Epic 2 (KeyManager for JWT)
 
-**Acceptance Criteria:**
-*   **Given** the application generates logs  
-*   **When** messages are written to stdout  
-*   **Then** they must be structured JSON logs including timestamp, log level, request context, and request ID.
+### Story 3.1: TokenService — JWT Generation
 
-### Story 3.2: Request & Response Logging
-As a developer,  
-I want all incoming HTTP requests and response times logged via interceptors,  
-So that API latency and performance bottlenecks can be monitored.
+As a developer,
+I want the TokenService to generate RSA-signed JWT access tokens,
+So that authentication tokens are cryptographically secure.
 
 **Acceptance Criteria:**
-*   **Given** an incoming HTTP request  
-*   **When** the response is dispatched to the client  
-*   **Then** the `LoggingInterceptor` must log the HTTP method, route, status code, and execution time in milliseconds.
 
-### Story 3.3: Asynchronous Demographics Logging to MongoDB
-As a business analyst,  
-I want user demographics (IP, location) logged to MongoDB on auth events asynchronously,  
-So that analytics are tracked without slowing down user authentications.
+**Given** KeyManager is configured
+**When** TokenService.generateAccessToken(user) is called
+**Then** it creates a JWT with payload: sub (user_id), iat, iss, kid, exp
+**And** signs it with the RSA private key
+**And** returns the signed JWT string
+
+### Story 3.2: TokenService — Refresh Token
+
+As a developer,
+I want the TokenService to generate and hash refresh tokens,
+So that refresh token rotation works.
 
 **Acceptance Criteria:**
-*   **Given** a successful user registration or login event  
-*   **When** IP address and User-Agent are captured  
-*   **Then** the system must perform an asynchronous write to MongoDB `user_demographics` collection.  
-*   **And** the HTTP response must be returned to the client immediately without blocking on the MongoDB operation.
+
+**Given** TokenService is configured
+**When** TokenService.generateRefreshToken() is called
+**Then** it generates a cryptographically random token
+**And** hashes it with bcrypt (cost=10)
+**And** returns both the raw token (for cookie) and hash (for DB)
+
+### Story 3.3: TokenService — Token Storage
+
+As a developer,
+I want the TokenService to store refresh tokens in the database,
+So that refresh tokens can be validated on use.
+
+**Acceptance Criteria:**
+
+**Given** a user_id and token_hash
+**When** TokenService.storeToken(user_id, token_hash, expires_at) is called
+**Then** it inserts a row into auth_tokens
+**And** uses UPSERT (INSERT ... ON CONFLICT (user_id) DO UPDATE)
+
+### Story 3.4: UserService — User CRUD
+
+As a developer,
+I want the UserService to manage user records,
+So that user operations are properly encapsulated.
+
+**Acceptance Criteria:**
+
+**Given** UserService is configured
+**When** UserService.findByEmail(email) is called
+**Then** it queries PostgreSQL for the user
+**And** returns User entity or null
+
+**Given** UserService is configured
+**When** UserService.findByUsername(username) is called
+**Then** it queries PostgreSQL for the user
+**And** returns User entity or null
+
+**Given** UserService is configured
+**When** UserService.create(userData) is called
+**Then** it inserts a new user into PostgreSQL
+**And** returns the created User entity
+
+### Story 3.5: AuthService — Registration Logic
+
+As a developer,
+I want the AuthService to handle user registration,
+So that new users can create accounts.
+
+**Acceptance Criteria:**
+
+**Given** a RegisterDto with valid data
+**When** AuthService.register(dto) is called
+**Then** it checks username/email uniqueness
+**Then** it hashes the password with bcrypt
+**Then** it creates the user in Transaction 1
+**Then** it generates token pair
+**Then** it stores refresh token in Transaction 2
+**And** returns {accessToken, refreshToken}
+
+**Given** a RegisterDto with existing username
+**When** AuthService.register(dto) is called
+**Then** it throws UserExistsException
+
+### Story 3.6: Auth Controller — Register Endpoint
+
+As a developer,
+I want the register endpoint wired up,
+So that users can register via HTTP.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check AuthController
+**Then** POST /auth/v1/register endpoint exists
+**And** it validates input with RegisterSchema.parse(body)
+**And** it returns 201 with tokens on success
+**And** it has Swagger decorators (@ApiTags, @ApiOperation, @ApiResponse)
 
 ---
 
-## Epic 4: Testing & Production Deployment
+## Epic 4: Login Flow
 
-Scaffold testing suites and compile containers for production.
+**Goal:** Implement complete user login — POST /auth/v1/authenticate. Users can authenticate.
 
-### Story 4.1: Automated Unit Testing Suite
-As a developer,  
-I want unit tests for services, utilities, and guards,  
-So that I can verify logic correctness during development.
+**Depends on:** Epic 3 (users exist in DB, TokenService works)
 
-**Acceptance Criteria:**
-*   **Given** unit test specifications  
-*   **When** I execute `npm run test`  
-*   **Then** unit test suites for `AuthService`, `TokenService`, `KeyManager`, and validation pipes must run and pass.  
-*   **And** code coverage must be reported.
+### Story 4.1: TokenService — Token Verification
 
-### Story 4.2: E2E Integration Testing Suite
-As a QA engineer,  
-I want E2E integration tests for register, authenticate, refresh, and logout endpoints,  
-So that end-to-end authentication flows can be regression-tested.
+As a developer,
+I want the TokenService to verify JWT access tokens,
+So that protected endpoints can validate requests.
 
 **Acceptance Criteria:**
-*   **Given** a running test database and cache instance  
-*   **When** I run `npm run test:e2e`  
-*   **Then** the test framework must simulate client HTTP calls and assert correct status codes, body response shapes, and cookie headers.
 
-### Story 4.3: Docker Compose & Production Build Setup
-As a system administrator,  
-I want compilation scripts and Docker configurations for core services,  
-So that deployment is standardized.
+**Given** a signed JWT
+**When** TokenService.verifyAccessToken(token) is called
+**Then** it verifies the signature using the public key
+**And** checks expiry
+**And** returns the decoded JwtPayload
 
-**Acceptance Criteria:**
-*   **Given** deployment-ready codebase  
-*   **When** I run `npm run build`  
-*   **Then** the typescript application compiles into `dist/`.  
-*   **And** running `docker-compose up` stands up PostgreSQL, Redis, MongoDB, and the NestJS app containers linked correctly.
+**Given** an invalid JWT
+**When** TokenService.verifyAccessToken(token) is called
+**Then** it throws the appropriate exception (TokenInvalidSignatureException or TokenExpiredException)
 
-### Story 4.4: Project Documentation & API Reference
-As an onboarding developer,  
-I want setup instructions and endpoint references in markdown,  
-So that I can quickly set up and integrate with the service.
+### Story 4.2: AuthService — Login Logic
+
+As a developer,
+I want the AuthService to handle user login,
+So that users can authenticate.
 
 **Acceptance Criteria:**
-*   **Given** documentation guides in `docs/`  
-*   **When** I read the references  
-*   **Then** I must see clear setup commands, environment configs, and endpoint documentation.
+
+**Given** valid credentials
+**When** AuthService.login(dto) is called
+**Then** it looks up user by email or username
+**Then** it checks if user is blocked (throws UserBlockedException)
+**Then** it validates password with bcrypt
+**Then** it uses UPSERT to store/update refresh token
+**Then** it logs demographics
+**And** returns {accessToken, refreshToken}
+
+**Given** invalid credentials
+**When** AuthService.login(dto) is called
+**Then** it throws InvalidCredentialsException
+
+### Story 4.3: Auth Controller — Login Endpoint
+
+As a developer,
+I want the login endpoint wired up,
+So that users can login via HTTP.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check AuthController
+**Then** POST /auth/v1/authenticate endpoint exists
+**And** it validates input with LoginSchema.parse(body)
+**And** it returns 200 with tokens on success
+**And** it has Swagger decorators
+
+---
+
+## Epic 5: Token Refresh Flow
+
+**Goal:** Implement complete token refresh — POST /auth/v1/refresh. Sessions can be maintained.
+
+**Depends on:** Epic 4 (login works, tokens exist)
+
+### Story 5.1: AuthService — Refresh Logic
+
+As a developer,
+I want the AuthService to handle token refresh,
+So that users can maintain sessions.
+
+**Acceptance Criteria:**
+
+**Given** a valid refresh token
+**When** AuthService.refresh(refreshToken) is called
+**Then** it verifies JWT signature
+**Then** it queries auth_tokens by user_id (O(1))
+**Then** it compares bcrypt hash
+**Then** it updates the token in DB
+**And** returns {accessToken, refreshToken}
+
+### Story 5.2: Auth Controller — Refresh Endpoint
+
+As a developer,
+I want the refresh endpoint wired up,
+So that users can refresh tokens via HTTP.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check AuthController
+**Then** POST /auth/v1/refresh endpoint exists
+**And** it reads refresh token from httpOnly cookie
+**And** it returns 200 with new tokens on success
+**And** it has Swagger decorators
+
+---
+
+## Epic 6: Logout Flow
+
+**Goal:** Implement complete user logout — POST /auth/v1/logout. Sessions can be terminated.
+
+**Depends on:** Epic 4 (login works)
+
+### Story 6.1: AuthService — Logout Logic
+
+As a developer,
+I want the AuthService to handle logout,
+So that sessions can be terminated.
+
+**Acceptance Criteria:**
+
+**Given** a valid accessToken
+**When** AuthService.logout(accessToken) is called
+**Then** it verifies the access token
+**Then** it extracts user_id
+**Then** it deletes refresh token from DB by user_id
+**And** silently succeeds if token was already invalid/expired
+
+### Story 6.2: Auth Controller — Logout Endpoint
+
+As a developer,
+I want the logout endpoint wired up,
+So that users can logout via HTTP.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check AuthController
+**Then** POST /auth/v1/logout endpoint exists
+**And** it reads access token from Authorization header
+**And** it clears refresh token cookie
+**And** it returns 200 on success
+**And** it has Swagger decorators
+
+---
+
+## Epic 7: Auth Guard & Protected Routes
+
+**Goal:** Implement auth guards, middleware, and exception filters. Routes can be protected.
+
+**Depends on:** Epic 4 (login works, tokens can be verified)
+
+### Story 7.1: Auth Middleware
+
+As a developer,
+I want middleware that extracts tokens from the Authorization header,
+So that guards receive tokens already extracted.
+
+**Acceptance Criteria:**
+
+**Given** a request with Authorization: Bearer <token>
+**When** AuthMiddleware processes it
+**Then** it extracts the token
+**And** attaches it to the request context
+
+### Story 7.2: JWT Auth Guard
+
+As a developer,
+I want a JwtAuthGuard that validates access tokens,
+So that protected routes are secure.
+
+**Acceptance Criteria:**
+
+**Given** a request with a valid token
+**When** JwtAuthGuard canActivate() is called
+**Then** it decodes JWT header to extract kid
+**Then** it gets public key from KeyManager
+**Then** it verifies JWT signature
+**Then** it checks Redis blacklist
+**Then** it checks expiry
+**And** attaches user to request
+
+**Given** a request with an invalid token
+**When** JwtAuthGuard canActivate() is called
+**Then** it throws the appropriate exception
+
+### Story 7.3: Global Exception Filter
+
+As a developer,
+I want a global exception filter that formats all errors consistently,
+So that API responses have uniform error structure.
+
+**Acceptance Criteria:**
+
+**Given** an exception is thrown
+**When** AllExceptionsFilter catches it
+**Then** it returns {success: false, error: {code, message, timestamp, path}}
+**And** sets the correct HTTP status code
+
+### Story 7.4: Zod Validation Pipe
+
+As a developer,
+I want a global validation pipe that uses Zod schemas,
+So that invalid input is rejected before reaching controllers.
+
+**Acceptance Criteria:**
+
+**Given** a request with invalid body
+**When** ValidationPipe processes it
+**Then** it parses the body with the route's Zod schema
+**Then** it rejects the request with 400 status if validation fails
+**And** returns Zod error details (field, message, code)
+
+---
+
+## Epic 8: Logging & Observability
+
+**Goal:** Implement structured logging and demographics tracking. System is observable.
+
+**Depends on:** Epic 3 (registration flow works for demographics)
+
+### Story 8.1: Logging Module
+
+As a developer,
+I want the LoggingModule with LogManager,
+So that modules can create loggers.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** LoggingModule is imported
+**Then** LogManager is available via AppContext
+**And** modules can call logManager.getLogger('ModuleName')
+**And** returns ILogger with debug, info, warn, error, fatal methods
+
+### Story 8.2: Pino Logger Provider
+
+As a developer,
+I want pino + chalk for colorful console output,
+So that logs are readable and fast.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** a log message is written
+**Then** it uses pino for structured JSON logging
+**And** chalk colors are applied for console output
+**And** log levels are configurable via LOG_LEVEL env var
+
+### Story 8.3: Request Logging Interceptor
+
+As a developer,
+I want an interceptor that logs all HTTP requests,
+So that request/response details are tracked.
+
+**Acceptance Criteria:**
+
+**Given** an HTTP request
+**When** LoggingInterceptor processes it
+**Then** it logs method, path, status code, duration
+**And** includes request ID for tracing
+**And** redacts sensitive data (passwords, tokens)
+
+### Story 8.4: Demographics Collection
+
+As a developer,
+I want demographics collection to MongoDB,
+So that user activity is tracked.
+
+**Acceptance Criteria:**
+
+**Given** a login or registration event
+**When** demographics are logged
+**Then** a document is inserted into user_demographics
+**And** includes user_id, last_ip, location (country, city)
+**And** MongoDB connection failure is handled gracefully
+
+---
+
+## Epic 9: Testing & Documentation
+
+**Goal:** Add unit tests, integration tests, and documentation. System is production-ready.
+
+**Depends on:** Epic 7 (all auth flows working)
+
+### Story 9.1: Unit Tests — Services
+
+As a developer,
+I want unit tests for all services,
+So that business logic is verified.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I run `npm run test`
+**Then** unit tests pass for AuthService, UserService, TokenService
+**And** test coverage is reported
+
+### Story 9.2: Unit Tests — Guards & Filters
+
+As a developer,
+I want unit tests for guards and exception filters,
+So that security logic is verified.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I run `npm run test`
+**Then** unit tests pass for JwtAuthGuard, AllExceptionsFilter
+
+### Story 9.3: Integration Tests
+
+As a developer,
+I want integration tests for API endpoints,
+So that end-to-end flows are verified.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I run `npm run test:e2e`
+**Then** integration tests pass for register, login, refresh, logout
+**And** tests use test database (not production)
+
+### Story 9.4: Documentation
+
+As a developer,
+I want comprehensive documentation,
+So that the project is easy to understand and maintain.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check README.md
+**Then** it has quick start guide, architecture overview, API reference
+**And** all public methods have JSDoc comments
+
+### Story 9.5: Docker Configuration
+
+As a developer,
+I want Docker Compose configuration,
+So that the application can be deployed consistently.
+
+**Acceptance Criteria:**
+
+**Given** the project
+**When** I check docker-compose.yml
+**Then** it defines services for NestJS app, PostgreSQL, MongoDB, Redis
+**And** `docker-compose up` starts all services
+**And** health checks are configured
+
+---
+
+*Epic breakdown created. Ready for story creation.*
