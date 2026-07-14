@@ -1,6 +1,7 @@
 %% Component Diagram - Hexagonal Architecture (NestJS)
 %% Maps to: Section 11.4 Folder Structure, Hexagonal Architecture
 %% Request lifecycle: Controller → Middleware → Guard → Interceptor → Pipe → Service → Repository → Adapter → Plugin
+%% Plugin layer: composite pattern internally, "Plugin" naming in code + docs + diagrams
 
 
 graph TB
@@ -32,18 +33,19 @@ graph TB
     end
     
     subgraph "Layer 6: Service (Business Logic)"
-        AUTH_SVC["AuthService<br/>━━━━━━━━━━━━<br/>register()<br/>login()<br/>refresh()<br/>logout()"]
-        USER_SVC["UserService<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>create()<br/>update()"]
-        TOKEN_SVC["TokenService<br/>━━━━━━━━━━━━<br/>generateTokenPair()<br/>validateRefreshToken()<br/>blacklistToken()"]
+        AUTH_SVC["AuthService<br/>━━━━━━━━━━━━<br/>register()<br/>login()<br/>refresh()<br/>logout()<br/>owns Transaction"]
+        USER_SVC["UserService<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>findByUsername()<br/>create()<br/>reduce()"]
+        TOKEN_SVC["TokenService<br/>━━━━━━━━━━━━<br/>generateTokenPair()<br/>validateRefreshToken()<br/>returns complete JWT payload"]
         LOG_SVC["LoggerService<br/>━━━━━━━━━━━━<br/>debug()<br/>info()<br/>warn()<br/>error()"]
+        TX_SVC["Transaction<br/>━━━━━━━━━━━━<br/>createTransaction(callback)<br/>discard()"]
     end
     
     subgraph "Layer 6.1: Interface (Ports)"
         I_AUTH["IAuthService<br/>━━━━━━━━━━━━<br/>register()<br/>login()<br/>refresh()<br/>logout()"]
-        I_USER["IUserService<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>create()<br/>update()"]
-        I_TOKEN["ITokenService<br/>━━━━━━━━━━━━<br/>generateTokenPair()<br/>validateRefreshToken()<br/>blacklistToken()"]
+        I_USER["IUserService<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>findByUsername()<br/>create()<br/>reduce()"]
+        I_TOKEN["ITokenService<br/>━━━━━━━━━━━━<br/>generateTokenPair()<br/>validateRefreshToken()<br/>returns JwtPayload"]
         I_LOGGER["ILoggerService<br/>━━━━━━━━━━━━<br/>debug()<br/>info()<br/>warn()<br/>error()"]
-        I_USER_REPO["IUserRepository<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>create()<br/>update()"]
+        I_USER_REPO["IUserRepository<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>findByUsername()<br/>create()<br/>update()"]
         I_TOKEN_REPO["ITokenRepository<br/>━━━━━━━━━━━━<br/>findByToken()<br/>save()<br/>deleteExpired()"]
         I_DEMO_REPO["IDemographicsRepository<br/>━━━━━━━━━━━━<br/>findByUserId()<br/>save()<br/>logDemographics()"]
     end
@@ -63,7 +65,7 @@ graph TB
         KEY_ADAPTER["KeyManager Adapter<br/>━━━━━━━━━━━━<br/>RSA key management<br/>Key rotation<br/>Private key clearing"]
     end
     
-    subgraph "Layer 9: Plugin (Optional Composite)"
+    subgraph "Layer 9: Plugin (Composite Pattern)"
         DB_PLUGIN["DbConnectionPlugin<br/>━━━━━━━━━━━━<br/>Connection pooling<br/>Health checks<br/>Retry logic"]
         CACHE_PLUGIN["CachePlugin<br/>━━━━━━━━━━━━<br/>Cache initialization<br/>Cache invalidation<br/>Cache warming"]
         LOG_PLUGIN["LogPlugin<br/>━━━━━━━━━━━━<br/>Log rotation<br/>Log shipping<br/>Log aggregation"]
@@ -96,6 +98,7 @@ graph TB
     AUTH_SVC --> USER_SVC
     AUTH_SVC --> TOKEN_SVC
     AUTH_SVC --> LOG_SVC
+    AUTH_SVC --> TX_SVC
     AUTH_SVC --> DEMO_REPO
     
     USER_SVC --> USER_REPO
@@ -103,12 +106,14 @@ graph TB
     USER_SVC --> DEMO_REPO
     TOKEN_SVC --> TOKEN_REPO
     TOKEN_SVC --> HASH_UTIL
+    TOKEN_SVC --> KEY_ADAPTER
+    
+    TX_SVC --> PG_ADAPTER
     
     USER_REPO --> PG_ADAPTER
     TOKEN_REPO --> PG_ADAPTER
     TOKEN_REPO --> REDIS_ADAPTER
     DEMO_REPO --> MONGO_ADAPTER
-    TOKEN_SVC --> KEY_ADAPTER
     
     PG_ADAPTER --> DB_PLUGIN
     REDIS_ADAPTER --> CACHE_PLUGIN
@@ -144,6 +149,7 @@ graph TB
     style USER_SVC fill:#FF9800,color:#fff
     style TOKEN_SVC fill:#FF9800,color:#fff
     style LOG_SVC fill:#FF9800,color:#fff
+    style TX_SVC fill:#FF9800,color:#fff
     
     style I_AUTH fill:#FFC107,color:#000
     style I_USER fill:#FFC107,color:#000

@@ -1,5 +1,6 @@
 %% Token Refresh Sequence
 %% Maps to: FR-3, FR-6, FR-7
+%% AuthService owns user lookup; TokenService validates JWT + returns complete payload
 
 sequenceDiagram
     participant Client
@@ -7,6 +8,7 @@ sequenceDiagram
     participant AuthService
     participant TokenService
     participant KeyManager
+    participant UserService
     participant PostgreSQL
 
     Client->>AuthController: POST /auth/v1/refresh
@@ -24,35 +26,38 @@ sequenceDiagram
     Note right of TokenService: jwt.verify(refreshToken, publicKey)
 
     alt Invalid JWT signature
-        TokenService-->>AuthService: AuthenticationException(TOKEN_INVALID_SIGNATURE)
-        AuthService-->>AuthController: AuthenticationException(TOKEN_INVALID_SIGNATURE)
+        TokenService-->>AuthService: TokenInvalidSignatureException
+        AuthService-->>AuthController: TokenInvalidSignatureException
         AuthController-->>Client: 401 Unauthorized
     end
 
-    TokenService->>PostgreSQL: SELECT * FROM refresh_token_keys
-    PostgreSQL-->>TokenService: RefreshToken[] (all hashed tokens)
+    TokenService->>PostgreSQL: SELECT * FROM auth_tokens WHERE token_type = 'refresh'
+    PostgreSQL-->>TokenService: AuthToken[] (all hashed tokens)
 
     TokenService->>TokenService: Validate with bcrypt
     Note right of TokenService: bcrypt.compare(refreshToken, token_hash)
 
     alt Token not found / Invalid
-        TokenService-->>AuthService: TokenRevokedException(TOKEN_REVOKED)
-        AuthService-->>AuthController: AuthenticationException(TOKEN_REVOKED)
+        TokenService-->>AuthService: TokenRevokedException
+        AuthService-->>AuthController: TokenRevokedException
         AuthController-->>Client: 401 Unauthorized
     else Token expired
         TokenService->>TokenService: Check expires_at < now()
-        TokenService-->>AuthService: TokenExpiredException(TOKEN_EXPIRED)
-        AuthService-->>AuthController: AuthenticationException(TOKEN_EXPIRED)
+        TokenService-->>AuthService: TokenExpiredException
+        AuthService-->>AuthController: TokenExpiredException
         AuthController-->>Client: 401 Unauthorized
     else Token valid
-        TokenService->>PostgreSQL: SELECT * FROM users WHERE id = token.user_id
-        PostgreSQL-->>TokenService: User entity
+        TokenService-->>AuthService: {sub, iat, iss, kid, exp, user_id}
+        Note right of TokenService: Returns complete JWT payload
 
-        TokenService->>TokenService: Check user.is_blocked
+        AuthService->>UserService: findById(payload.user_id)
+        UserService->>PostgreSQL: SELECT * FROM users WHERE id = ?
+        PostgreSQL-->>UserService: User entity
+
+        AuthService->>AuthService: Check user.is_blocked
 
         alt User is blocked
-            TokenService-->>AuthService: UserBlockedException(AUTH_USER_BLOCKED)
-            AuthService-->>AuthController: AuthenticationException(AUTH_USER_BLOCKED)
+            AuthService-->>AuthController: UserBlockedException
             AuthController-->>Client: 403 Forbidden
         else User active
             AuthService->>TokenService: generateTokenPair(user)
@@ -65,13 +70,13 @@ sequenceDiagram
             TokenService->>TokenService: Hash new refresh token (bcrypt)
             Note right of TokenService: bcrypt.hash(newRefreshToken, 10)
 
-            TokenService->>PostgreSQL: BEGIN TRANSACTION
+            AuthService->>PostgreSQL: BEGIN TRANSACTION
 
-            TokenService->>PostgreSQL: UPDATE refresh_token_keys SET token_hash=?, expires_at=? WHERE user_id=?
-            PostgreSQL-->>TokenService: Updated
+            AuthService->>PostgreSQL: UPDATE auth_tokens SET token_hash=?, expires_at=? WHERE user_id=? AND token_type='refresh'
+            PostgreSQL-->>AuthService: Updated
 
-            TokenService->>PostgreSQL: COMMIT
-            PostgreSQL-->>TokenService: OK
+            AuthService->>PostgreSQL: COMMIT
+            PostgreSQL-->>AuthService: OK
 
             TokenService-->>AuthService: {accessToken, refreshToken}
             AuthService-->>AuthController: {accessToken, refreshToken}

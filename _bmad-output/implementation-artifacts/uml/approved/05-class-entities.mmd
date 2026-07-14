@@ -1,18 +1,20 @@
 %% Entity Architecture Diagram
 %% Maps to: FR-13, FR-14, FR-23, FR-24, FR-25
-%% Storage: PostgreSQL (entities), MongoDB (models), Redis (cache)
+%% Storage: PostgreSQL (entities), MongoDB (models)
+%% Note: Token blacklist is Redis-only (see 04-redis-blacklist.mmd)
+%% Constraint: Single session per user — one active refresh token at a time
 
 erDiagram
     %% PostgreSQL Entities
     USERS {
         UUID id PK
-        %% not null; 
-        VARCHAR username UK 
+        %% not null
+        VARCHAR username UK
         %% not null
         VARCHAR email UK
         VARCHAR password
         BOOLEAN blocked
-        BOOLEAN is_deleted 
+        BOOLEAN is_deleted
         BOOLEAN is_verified
         TIMESTAMP created_at
         TIMESTAMP updated_at
@@ -20,12 +22,26 @@ erDiagram
 
     AUTH_TOKENS {
         UUID user_id PK
-        VARCHAR refresh_token
-        TIMESTAMP refresh_token_expires_at
-        TIMESTAMP refresh_token_updated_at
-        VARCHAR reset_token
-        TIMESTAMP reset_token_expires_at
-        TIMESTAMP reset_token_updated_at
+        VARCHAR token_hash
+        %% bcrypt hash of refresh token
+        VARCHAR token_type
+        %% 'refresh' or 'reset'
+        TIMESTAMP expires_at
+        TIMESTAMP updated_at
+        %% Design constraint: one row per user (single active session)
+    }
+
+    PUBLIC_KEY_REGISTRY {
+        VARCHAR kid PK
+        %% Key ID for JWT header
+        TEXT public_key
+        %% RSA public key PEM
+        VARCHAR alg
+        %% 'RSA'
+        VARCHAR use
+        %% 'sig' or 'enc'
+        TIMESTAMP created_at
+        TIMESTAMP expires_at
     }
 
     %% MongoDB Documents
@@ -38,14 +54,6 @@ erDiagram
         TIMESTAMP last_login
     }
 
-    %% Redis Keys
-    TOKEN_BLACKLIST {
-        VARCHAR id PK
-        TIMESTAMP expires_at
-        UUID user_id
-        VARCHAR access_token
-    }
-
     USERS ||--o| AUTH_TOKENS : "has one, on delete cascade"
     USERS ||--o| USER_DEMOGRAPHICS : "has one"
-    USERS ||--o{ TOKEN_BLACKLIST : "can have many"
+    USERS ||--o{ PUBLIC_KEY_REGISTRY : "registers signing keys"

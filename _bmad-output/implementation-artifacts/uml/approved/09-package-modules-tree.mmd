@@ -1,93 +1,141 @@
 %% TreeView Diagram - Module Structure
 %% Maps to: Section 11.4 Folder Structure, Section 11.5 Internal Library Management
 %% Shows hierarchical package organization with interfaces and types
+%% Token blacklist is Redis-only (not in PostgreSQL schema)
 
-treeView-beta
-    src (AuthService)
-        Modules
-            auth
+graph TB
+    subgraph src ["src (AuthService)"]
+        subgraph Modules
+            subgraph auth
                 AuthModule
                 AuthController
                 AuthService
-            user
+            end
+            subgraph user
                 UserModule
                 UserController
                 UserService
                 UserEntity
-            token
+            end
+            subgraph token
                 TokenModule
                 TokenService
-                TokenEntity
-            logging
+                AuthTokenEntity
+                PublicKeyRegistryEntity
+            end
+            subgraph logging
                 LoggingModule
                 LoggerService
-        lib
-            interfaces
+            end
+        end
+
+        subgraph lib
+            subgraph interfaces
                 IAuthService
                 IUserService
                 ITokenService
                 ILoggerService
-            types
-                schemas
+            end
+            subgraph types
+                subgraph schemas
                     RegisterSchema
                     LoginSchema
                     RefreshTokenSchema
-                dto
+                end
+                subgraph dto
                     RegisterDto
                     LoginDto
                     RefreshTokenDto
-                response
+                end
+                subgraph response
                     TokenResponse
                     TokenPair
                     UserResponse
-                builder
+                    JwtPayload
+                end
+                subgraph builder
                     ReduceBuilder
-                entity
+                end
+                subgraph entity
                     UserEntity
-            decorators
+                end
+            end
+            subgraph decorators
                 RetryDecorator
                 CacheDecorator
                 LogDecorator
-            filters
+            end
+            subgraph filters
                 HttpExceptionFilter
                 AllExceptionsFilter
-            guards
+            end
+            subgraph guards
                 JwtAuthGuard
                 RolesGuard
-            interceptors
+            end
+            subgraph interceptors
                 LoggingInterceptor
                 TimeoutInterceptor
                 TransformInterceptor
-            pipes
+            end
+            subgraph pipes
                 ValidationPipe
-            utils
+            end
+            subgraph utils
                 HashUtil
                 UuidUtil
-        Configuration
-            env
+            end
+            subgraph transaction
+                Transaction
+            end
+        end
+
+        subgraph Configuration
+            subgraph env
                 EnvValidator
-            database
+            end
+            subgraph database
                 DatabaseConfig
-            context
+            end
+            subgraph context
                 AppContext
-        Database Layer
-            migrations
+            end
+        end
+
+        subgraph DatabaseLayer
+            subgraph migrations
                 TypeOrmMigrations
-            seeds
+            end
+            subgraph seeds
                 DatabaseSeeds
-        Schema
-            entities
+            end
+        end
+
+        subgraph Schema
+            subgraph entities
                 UserEntity
-                TokenEntity
-                SessionEntity
-            model
+                AuthTokenEntity
+                PublicKeyRegistryEntity
+            end
+            subgraph model
                 DemographicsModel
                 AuditLogModel
                 ActivityModel
-            cache
+            end
+            subgraph cache
                 TokenCache
                 SessionCache
                 RateLimitCache
-                BlacklistCache
+            end
+        end
+
         AppModule
         Main
+    end
+
+    style src fill:#1a1a2e,color:#fff
+    style Modules fill:#16213e,color:#fff
+    style lib fill:#0f3460,color:#fff
+    style Configuration fill:#533483,color:#fff
+    style DatabaseLayer fill:#2b2d42,color:#fff
+    style Schema fill:#8d99ae,color:#000

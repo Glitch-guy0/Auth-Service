@@ -32,6 +32,11 @@ classDiagram
         +string message = "Token has been revoked"
     }
     
+    class TokenInvalidSignatureException {
+        +string code = "TOKEN_INVALID_SIGNATURE"
+        +string message = "Token signature verification failed"
+    }
+    
     class AuthorizationException {
         +string code = "AUTH_ERROR"
         +number statusCode = 403
@@ -91,6 +96,7 @@ classDiagram
     AuthenticationException <|-- InvalidCredentialsException
     AuthenticationException <|-- TokenExpiredException
     AuthenticationException <|-- TokenRevokedException
+    AuthenticationException <|-- TokenInvalidSignatureException
     
     AuthorizationException <|-- UserBlockedException
     
@@ -107,4 +113,4 @@ classDiagram
     note for AuthorizationException "403 Forbidden<br/>For authorization failures"
     note for ValidationException "400 Bad Request<br/>For input validation errors"
     note for NotFoundException "404 Not Found<br/>For resource not found"
-    note for RateLimitException "429 Too Many Requests<br/>For rate limiting"
+    note for RateLimitException "429 Too Many Requests<br/>For rate limiting<br/>TODO: Plan rate limiting middleware/guard in future sprint"

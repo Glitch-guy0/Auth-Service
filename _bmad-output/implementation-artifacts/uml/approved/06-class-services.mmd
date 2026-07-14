@@ -1,6 +1,9 @@
 %% Class Diagram
 %% Maps to: Hexagonal Architecture, Ports & Adapters
 %% Service implementations, dependencies, and adapter classes
+%% TokenService validates JWT + returns complete payload (not just boolean)
+%% AuthService owns user lookup after token validation
+%% Transaction uses callback pattern: createTransaction(callback) + discard()
 
 classDiagram
     %% ════════════════════════════════════════════════════════════════
@@ -42,9 +45,9 @@ classDiagram
     class ITokenService {
         <<Port Interface>>
         +generateTokenPair(user: UserEntity): Promise~TokenPair~
-        +validateRefreshToken(token: string): Promise~boolean~
+        +validateRefreshToken(token: string): Promise~JwtPayload
         +blacklistToken(token: string): Promise~void~
-        +isBlacklisted(jti: string): Promise~boolean~
+        +isBlacklisted(accessToken: string): Promise~boolean~
     }
 
     %% ════════════════════════════════════════════════════════════════
@@ -54,12 +57,14 @@ classDiagram
         -userService: IUserService
         -tokenService: ITokenService
         -logger: ILoggerService
+        -transaction: Transaction
         +register(dto: RegisterDto): Promise~TokenResponse~
         +login(dto: LoginDto): Promise~TokenResponse~
         +refresh(dto: RefreshTokenDto): Promise~TokenResponse~
         +logout(accessToken: string): Promise~void~
         -hashPassword(password: string): Promise~string~
         -verifyPassword(password: string, hash: string): Promise~boolean~
+        -lookupUser(payload: JwtPayload): Promise~UserEntity~
     }
 
     class UserService {
@@ -77,9 +82,9 @@ classDiagram
         -tokenRepo: TokenRepository
         -redis: RedisService
         +generateTokenPair(user: UserEntity): Promise~TokenPair~
-        +validateRefreshToken(token: string): Promise~boolean~
+        +validateRefreshToken(token: string): Promise~JwtPayload
         +blacklistToken(token: string): Promise~void~
-        +isBlacklisted(jti: string): Promise~boolean~
+        +isBlacklisted(accessToken: string): Promise~boolean~
         -signAccessToken(user: UserEntity): string
         -hashToken(token: string): string
     }
@@ -102,6 +107,15 @@ classDiagram
         -clearPrivateKey(): void
     }
 
+    class Transaction {
+        <<Pattern>>
+        -connection: PostgreSQL
+        -isActive: boolean
+        +createTransaction(callback: Function): Promise~any~
+        +discard(): void
+    }
+    Note for Transaction "createTransaction(callback):\n  begin → run callback\n  if error → rollback → rethrow\n  if ok → commit\n  discard() releases tx object"
+
     %% ════════════════════════════════════════════════════════════════
     %%  INTERFACE IMPLEMENTATIONS
     %% ════════════════════════════════════════════════════════════════
@@ -115,6 +129,7 @@ classDiagram
     AuthService --> IUserService : uses
     AuthService --> ITokenService : uses
     AuthService --> ILoggerService : logs to
+    AuthService --> Transaction : manages
 
     UserService --> UserRepository : persists
     TokenService --> TokenRepository : persists

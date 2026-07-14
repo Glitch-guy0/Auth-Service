@@ -25,17 +25,17 @@ sequenceDiagram
     PostgreSQL-->>UserService: User entity
 
     alt User not found
-        AuthService-->>AuthController: AuthenticationException(AUTH_INVALID_CREDENTIALS)
+        AuthService-->>AuthController: InvalidCredentialsException
         AuthController-->>Client: 401 Unauthorized
     else User blocked
-        AuthService-->>AuthController: UserBlockedException(AUTH_USER_BLOCKED)
+        AuthService-->>AuthController: UserBlockedException
         AuthController-->>Client: 403 Forbidden
     else User found and active
         AuthService->>AuthService: verifyPassword(dto.password, user.password)
         Note right of AuthService: bcrypt.compare(password, hash)
 
         alt Invalid password
-            AuthService-->>AuthController: AuthenticationException(AUTH_INVALID_CREDENTIALS)
+            AuthService-->>AuthController: InvalidCredentialsException
             AuthController-->>Client: 401 Unauthorized
         else Valid password
             AuthService->>TokenService: generateTokenPair(user)
@@ -50,8 +50,8 @@ sequenceDiagram
 
             PostgreSQL->>PostgreSQL: BEGIN TRANSACTION
 
-            TokenService->>PostgreSQL: INSERT INTO refresh_token_keys (token_hash, user_id)
-            PostgreSQL-->>TokenService: RefreshToken entity
+            TokenService->>PostgreSQL: INSERT INTO auth_tokens (token_hash, token_type, user_id, expires_at)
+            PostgreSQL-->>TokenService: AuthToken entity
 
             PostgreSQL->>PostgreSQL: COMMIT
 

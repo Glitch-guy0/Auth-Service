@@ -1,6 +1,7 @@
 %% Types & Interfaces Diagram
 %% Maps to: Hexagonal Architecture, Ports & Adapters
 %% Zod schemas, DTOs, Response types, Port interfaces, and type transformations
+%% TokenService validates JWT + returns complete JwtPayload
 
 classDiagram
     %% ════════════════════════════════════════════════════════════════
@@ -63,6 +64,16 @@ classDiagram
         +refreshToken: string
     }
 
+    class JwtPayload {
+        <<Internal Type>>
+        +sub: string
+        +iat: number
+        +iss: string
+        +kid: string
+        +exp: number
+        +user_id: string
+    }
+
     class UserResponse {
         <<Response Type>>
         +id: string
@@ -103,9 +114,9 @@ classDiagram
     class ITokenService {
         <<Port Interface>>
         +generateTokenPair(user: UserEntity): Promise~TokenPair~
-        +validateRefreshToken(token: string): Promise~boolean~
+        +validateRefreshToken(token: string): Promise~JwtPayload
         +blacklistToken(token: string): Promise~void~
-        +isBlacklisted(jti: string): Promise~boolean~
+        +isBlacklisted(accessToken: string): Promise~boolean~
     }
 
     %% ════════════════════════════════════════════════════════════════
@@ -141,6 +152,7 @@ classDiagram
     %% Entity to Interface (flow)
     UserEntity --> ITokenService : passed to
     TokenPair --> ITokenService : returned
+    JwtPayload --> ITokenService : returned by validateRefreshToken
 
     %% Entity transformations
     UserEntity ..> ReduceBuilder : reduce()

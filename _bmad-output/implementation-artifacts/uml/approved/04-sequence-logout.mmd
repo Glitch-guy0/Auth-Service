@@ -17,14 +17,14 @@ sequenceDiagram
 
     Note over AuthService,PostgreSQL: Delete refresh token first (transaction)
     PostgreSQL->>PostgreSQL: BEGIN TRANSACTION
-    TokenService->>PostgreSQL: DELETE FROM refresh_token_keys WHERE token_hash = ?
+    TokenService->>PostgreSQL: DELETE FROM auth_tokens WHERE token_hash = ? AND token_type = 'refresh'
     PostgreSQL-->>TokenService: Deleted
     PostgreSQL->>PostgreSQL: COMMIT
 
     Note over AuthService,Redis: Blacklist access token (best-effort)
     AuthService->>TokenService: blacklistToken(accessToken)
-    TokenService->>TokenService: Decode token to get JTI + expiry
-    TokenService->>Redis: SET blacklist:{jti} {expires_at, user_id}
+    TokenService->>TokenService: Decode token to get access_token + expiry
+    TokenService->>Redis: SET blacklist:{access_token} {expires_at, user_id}
     Note right of Redis: TTL = token expiry time
     Redis-->>TokenService: OK
 
