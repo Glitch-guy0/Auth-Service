@@ -8,6 +8,7 @@ sequenceDiagram
     participant UserService
     participant TokenService
     participant KeyManager
+    participant Transaction
     participant PostgreSQL
 
     Client->>AuthController: POST /auth/v1/authenticate
@@ -48,12 +49,16 @@ sequenceDiagram
             TokenService->>TokenService: Hash refresh token (bcrypt)
             Note right of TokenService: bcrypt.hash(refreshToken, 10)
 
-            PostgreSQL->>PostgreSQL: BEGIN TRANSACTION
-
-            TokenService->>PostgreSQL: INSERT INTO auth_tokens (token_hash, token_type, user_id, expires_at)
-            PostgreSQL-->>TokenService: AuthToken entity
-
-            PostgreSQL->>PostgreSQL: COMMIT
+            rect rgb(255, 245, 230)
+                Note over Transaction,PostgreSQL: Transaction — Token Storage
+                AuthService->>Transaction: createTransaction(async (tx) => { ... })
+                Transaction->>PostgreSQL: BEGIN TRANSACTION
+                Transaction->>TokenService: storeToken(tokenHash, userId)
+                TokenService->>PostgreSQL: INSERT INTO auth_tokens (token_hash, token_type, user_id, expires_at)
+                PostgreSQL-->>TokenService: AuthToken entity
+                Transaction->>Transaction: Auto-commit (no error)
+                Transaction->>PostgreSQL: COMMIT
+            end
 
             TokenService-->>AuthService: {accessToken, refreshToken}
             AuthService-->>AuthController: {accessToken, refreshToken}

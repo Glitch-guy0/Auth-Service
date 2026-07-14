@@ -114,7 +114,6 @@ classDiagram
         +createTransaction(callback: Function): Promise~any~
         +discard(): void
     }
-    Note for Transaction "createTransaction(callback):\n  begin → run callback\n  if error → rollback → rethrow\n  if ok → commit\n  discard() releases tx object"
 
     %% ════════════════════════════════════════════════════════════════
     %%  INTERFACE IMPLEMENTATIONS

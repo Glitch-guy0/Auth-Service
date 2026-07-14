@@ -6,6 +6,7 @@ sequenceDiagram
     participant AuthController
     participant AuthService
     participant TokenService
+    participant Transaction
     participant PostgreSQL
     participant Redis
 
@@ -15,11 +16,16 @@ sequenceDiagram
 
     AuthController->>AuthService: logout(accessToken, refreshToken)
 
-    Note over AuthService,PostgreSQL: Delete refresh token first (transaction)
-    PostgreSQL->>PostgreSQL: BEGIN TRANSACTION
-    TokenService->>PostgreSQL: DELETE FROM auth_tokens WHERE token_hash = ? AND token_type = 'refresh'
-    PostgreSQL-->>TokenService: Deleted
-    PostgreSQL->>PostgreSQL: COMMIT
+    rect rgb(255, 245, 230)
+        Note over Transaction,PostgreSQL: Transaction — Delete Refresh Token
+        AuthService->>Transaction: createTransaction(async (tx) => { ... })
+        Transaction->>PostgreSQL: BEGIN TRANSACTION
+        Transaction->>TokenService: deleteRefreshToken(refreshToken)
+        TokenService->>PostgreSQL: DELETE FROM auth_tokens WHERE token_hash = ? AND token_type = 'refresh'
+        PostgreSQL-->>TokenService: Deleted
+        Transaction->>Transaction: Auto-commit (no error)
+        Transaction->>PostgreSQL: COMMIT
+    end
 
     Note over AuthService,Redis: Blacklist access token (best-effort)
     AuthService->>TokenService: blacklistToken(accessToken)
