@@ -34,7 +34,7 @@ graph TB
     
     subgraph "Layer 6: Service (Business Logic)"
         AUTH_SVC["AuthService<br/>━━━━━━━━━━━━<br/>register()<br/>login()<br/>refresh()<br/>logout()<br/>owns Transaction"]
-        USER_SVC["UserService<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>findByUsername()<br/>create()<br/>reduce()"]
+        USER_SVC["UserService<br/>━━━━━━━━━━━━<br/>findById()<br/>findByEmail()<br/>findByUsername()<br/>create()<br/>reduce()<br/>logDemographics()"]
         TOKEN_SVC["TokenService<br/>━━━━━━━━━━━━<br/>generateTokenPair()<br/>validateRefreshToken()<br/>returns complete JWT payload"]
         LOG_SVC["LoggerService<br/>━━━━━━━━━━━━<br/>debug()<br/>info()<br/>warn()<br/>error()"]
         TX_SVC["Transaction<br/>━━━━━━━━━━━━<br/>createTransaction(callback)<br/>discard()"]
@@ -99,10 +99,10 @@ graph TB
     AUTH_SVC --> TOKEN_SVC
     AUTH_SVC --> LOG_SVC
     AUTH_SVC --> TX_SVC
-    AUTH_SVC --> DEMO_REPO
     
     USER_SVC --> USER_REPO
     USER_SVC --> HASH_UTIL
+    USER_SVC --> DEMO_REPO
     USER_SVC --> DEMO_REPO
     TOKEN_SVC --> TOKEN_REPO
     TOKEN_SVC --> HASH_UTIL

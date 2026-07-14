@@ -53,14 +53,19 @@ sequenceDiagram
                 Note over Transaction,PostgreSQL: Transaction — Token Storage
                 AuthService->>Transaction: createTransaction(async (tx) => { ... })
                 Transaction->>PostgreSQL: BEGIN TRANSACTION
-                Transaction->>TokenService: storeToken(tokenHash, userId)
-                TokenService->>PostgreSQL: INSERT INTO auth_tokens (token_hash, token_type, user_id, expires_at)
+                Transaction->>TokenService: upsertToken(tokenHash, userId)
+                TokenService->>PostgreSQL: INSERT INTO auth_tokens (user_id, token_hash, expires_at) ON CONFLICT (user_id) DO UPDATE SET token_hash=?, expires_at=?, updated_at=now()
                 PostgreSQL-->>TokenService: AuthToken entity
                 Transaction->>Transaction: Auto-commit (no error)
                 Transaction->>PostgreSQL: COMMIT
             end
 
             TokenService-->>AuthService: {accessToken, refreshToken}
+
+            AuthService->>UserService: logDemographics(userId, ip, userAgent)
+            UserService->>PostgreSQL: INSERT INTO user_demographics
+            Note right of UserService: MongoDB async write
+
             AuthService-->>AuthController: {accessToken, refreshToken}
 
             AuthController->>AuthController: Set-Cookie (httpOnly, secure, sameSite=strict)

@@ -22,13 +22,11 @@ erDiagram
 
     AUTH_TOKENS {
         UUID user_id PK
+        %% user_id IS the PK — one row per user (single active session)
         VARCHAR token_hash
         %% bcrypt hash of refresh token
-        VARCHAR token_type
-        %% 'refresh' or 'reset'
         TIMESTAMP expires_at
         TIMESTAMP updated_at
-        %% Design constraint: one row per user (single active session)
     }
 
     PUBLIC_KEY_REGISTRY {

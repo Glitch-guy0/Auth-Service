@@ -1,41 +1,52 @@
 %% User Logout Sequence
 %% Maps to: FR-4, FR-25
+%% Logout takes access token only: verify → get userId → delete refresh token
 
 sequenceDiagram
     participant Client
     participant AuthController
     participant AuthService
     participant TokenService
+    participant KeyManager
     participant Transaction
     participant PostgreSQL
     participant Redis
 
     Client->>AuthController: POST /auth/v1/logout
     AuthController->>AuthController: Extract access token from Authorization header
-    AuthController->>AuthController: Extract refresh token from httpOnly cookie
+    AuthController->>AuthController: Clear-Cookie header (refreshToken)
 
-    AuthController->>AuthService: logout(accessToken, refreshToken)
+    AuthController->>AuthService: logout(accessToken)
 
-    rect rgb(255, 245, 230)
-        Note over Transaction,PostgreSQL: Transaction — Delete Refresh Token
-        AuthService->>Transaction: createTransaction(async (tx) => { ... })
-        Transaction->>PostgreSQL: BEGIN TRANSACTION
-        Transaction->>TokenService: deleteRefreshToken(refreshToken)
-        TokenService->>PostgreSQL: DELETE FROM auth_tokens WHERE token_hash = ? AND token_type = 'refresh'
-        PostgreSQL-->>TokenService: Deleted
-        Transaction->>Transaction: Auto-commit (no error)
-        Transaction->>PostgreSQL: COMMIT
+    AuthService->>TokenService: verifyAccessToken(accessToken)
+    TokenService->>TokenService: Decode JWT header to extract kid
+    TokenService->>KeyManager: getPublicKey(kid)
+    KeyManager-->>TokenService: PublicKey
+    TokenService->>TokenService: Verify JWT signature (RSA)
+    TokenService-->>AuthService: {sub, exp, user_id}
+
+    alt Token invalid or expired
+        AuthService-->>AuthController: success (silently ignored)
+        Note right of AuthService: "deleted" response regardless
+    else Token valid
+        rect rgb(255, 245, 230)
+            Note over Transaction,PostgreSQL: Transaction — Delete Refresh Token
+            AuthService->>Transaction: createTransaction(async (tx) => { ... })
+            Transaction->>PostgreSQL: BEGIN TRANSACTION
+            Transaction->>TokenService: deleteRefreshTokenByUserId(userId)
+            TokenService->>PostgreSQL: DELETE FROM auth_tokens WHERE user_id = ?
+            PostgreSQL-->>TokenService: Deleted
+            Transaction->>Transaction: Auto-commit (no error)
+            Transaction->>PostgreSQL: COMMIT
+        end
+
+        Note over AuthService,Redis: Blacklist access token (best-effort)
+        AuthService->>TokenService: blacklistToken(accessToken)
+        TokenService->>TokenService: Decode token to get access_token + expiry
+        TokenService->>Redis: SET blacklist:{access_token} {expires_at, user_id}
+        Note right of Redis: TTL = token expiry time
+        Redis-->>TokenService: OK
     end
 
-    Note over AuthService,Redis: Blacklist access token (best-effort)
-    AuthService->>TokenService: blacklistToken(accessToken)
-    TokenService->>TokenService: Decode token to get access_token + expiry
-    TokenService->>Redis: SET blacklist:{access_token} {expires_at, user_id}
-    Note right of Redis: TTL = token expiry time
-    Redis-->>TokenService: OK
-
-    TokenService-->>AuthService: success
     AuthService-->>AuthController: success
-
-    AuthController->>AuthController: Clear-Cookie (refreshToken)
-    AuthController-->>Client: 200 OK + Clear-Cookie
+    AuthController-->>Client: 200 OK
