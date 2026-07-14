@@ -12,18 +12,18 @@ sequenceDiagram
 
     Client->>AuthController: POST /auth/v1/authenticate
     AuthController->>AuthController: Parse & Validate (LoginSchema.parse)
-    
+
     AuthController->>AuthService: login(dto)
-    
+
     alt Email provided
         AuthService->>UserService: findByEmail(dto.email)
     else Username provided
         AuthService->>UserService: findByUsername(dto.username)
     end
-    
+
     UserService->>PostgreSQL: SELECT * FROM users WHERE email/username = ?
     PostgreSQL-->>UserService: User entity
-    
+
     alt User not found
         AuthService-->>AuthController: AuthenticationException(AUTH_INVALID_CREDENTIALS)
         AuthController-->>Client: 401 Unauthorized
@@ -33,7 +33,7 @@ sequenceDiagram
     else User found and active
         AuthService->>AuthService: verifyPassword(dto.password, user.password)
         Note right of AuthService: bcrypt.compare(password, hash)
-        
+
         alt Invalid password
             AuthService-->>AuthController: AuthenticationException(AUTH_INVALID_CREDENTIALS)
             AuthController-->>Client: 401 Unauthorized
@@ -41,19 +41,23 @@ sequenceDiagram
             AuthService->>TokenService: generateTokenPair(user)
             TokenService->>KeyManager: getPrivateKey()
             KeyManager-->>TokenService: PrivateKey (cleared after use)
-            
+
             TokenService->>TokenService: Sign access token (RSA)
             Note right of TokenService: JWT payload: sub, iat, iss, kid, exp
-            
+
             TokenService->>TokenService: Hash refresh token (bcrypt)
             Note right of TokenService: bcrypt.hash(refreshToken, 10)
-            
-            TokenService->>PostgreSQL: INSERT INTO refresh_token_keys (token_hash)
+
+            PostgreSQL->>PostgreSQL: BEGIN TRANSACTION
+
+            TokenService->>PostgreSQL: INSERT INTO refresh_token_keys (token_hash, user_id)
             PostgreSQL-->>TokenService: RefreshToken entity
-            
+
+            PostgreSQL->>PostgreSQL: COMMIT
+
             TokenService-->>AuthService: {accessToken, refreshToken}
             AuthService-->>AuthController: {accessToken, refreshToken}
-            
+
             AuthController->>AuthController: Set-Cookie (httpOnly, secure, sameSite=strict)
             AuthController-->>Client: 200 OK + Set-Cookie
         end

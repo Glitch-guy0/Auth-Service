@@ -12,22 +12,24 @@ sequenceDiagram
     Client->>AuthController: POST /auth/v1/logout
     AuthController->>AuthController: Extract access token from Authorization header
     AuthController->>AuthController: Extract refresh token from httpOnly cookie
-    
+
     AuthController->>AuthService: logout(accessToken, refreshToken)
-    
-    Note over AuthService,Redis: Blacklist access token
+
+    Note over AuthService,PostgreSQL: Delete refresh token first (transaction)
+    PostgreSQL->>PostgreSQL: BEGIN TRANSACTION
+    TokenService->>PostgreSQL: DELETE FROM refresh_token_keys WHERE token_hash = ?
+    PostgreSQL-->>TokenService: Deleted
+    PostgreSQL->>PostgreSQL: COMMIT
+
+    Note over AuthService,Redis: Blacklist access token (best-effort)
     AuthService->>TokenService: blacklistToken(accessToken)
-    TokenService->>TokenService: Decode token to get JTI
+    TokenService->>TokenService: Decode token to get JTI + expiry
     TokenService->>Redis: SET blacklist:{jti} {expires_at, user_id}
     Note right of Redis: TTL = token expiry time
     Redis-->>TokenService: OK
-    
-    Note over AuthService,PostgreSQL: Delete refresh token
-    TokenService->>PostgreSQL: DELETE FROM refresh_token_keys WHERE token_hash = ?
-    PostgreSQL-->>TokenService: Deleted
-    
+
     TokenService-->>AuthService: success
     AuthService-->>AuthController: success
-    
+
     AuthController->>AuthController: Clear-Cookie (refreshToken)
     AuthController-->>Client: 200 OK + Clear-Cookie

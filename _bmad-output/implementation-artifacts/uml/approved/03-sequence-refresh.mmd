@@ -1,0 +1,82 @@
+%% Token Refresh Sequence
+%% Maps to: FR-3, FR-6, FR-7
+
+sequenceDiagram
+    participant Client
+    participant AuthController
+    participant AuthService
+    participant TokenService
+    participant KeyManager
+    participant PostgreSQL
+
+    Client->>AuthController: POST /auth/v1/refresh
+    AuthController->>AuthController: Extract refresh token from httpOnly cookie
+    AuthController->>AuthController: Parse & Validate (RefreshTokenSchema.parse)
+
+    AuthController->>AuthService: refresh(refreshToken)
+
+    AuthService->>TokenService: validateRefreshToken(refreshToken)
+    TokenService->>TokenService: Decode JWT header to extract kid
+    TokenService->>KeyManager: getPublicKey(kid)
+    KeyManager-->>TokenService: PublicKey
+
+    TokenService->>TokenService: Verify JWT signature (RSA)
+    Note right of TokenService: jwt.verify(refreshToken, publicKey)
+
+    alt Invalid JWT signature
+        TokenService-->>AuthService: AuthenticationException(TOKEN_INVALID_SIGNATURE)
+        AuthService-->>AuthController: AuthenticationException(TOKEN_INVALID_SIGNATURE)
+        AuthController-->>Client: 401 Unauthorized
+    end
+
+    TokenService->>PostgreSQL: SELECT * FROM refresh_token_keys
+    PostgreSQL-->>TokenService: RefreshToken[] (all hashed tokens)
+
+    TokenService->>TokenService: Validate with bcrypt
+    Note right of TokenService: bcrypt.compare(refreshToken, token_hash)
+
+    alt Token not found / Invalid
+        TokenService-->>AuthService: TokenRevokedException(TOKEN_REVOKED)
+        AuthService-->>AuthController: AuthenticationException(TOKEN_REVOKED)
+        AuthController-->>Client: 401 Unauthorized
+    else Token expired
+        TokenService->>TokenService: Check expires_at < now()
+        TokenService-->>AuthService: TokenExpiredException(TOKEN_EXPIRED)
+        AuthService-->>AuthController: AuthenticationException(TOKEN_EXPIRED)
+        AuthController-->>Client: 401 Unauthorized
+    else Token valid
+        TokenService->>PostgreSQL: SELECT * FROM users WHERE id = token.user_id
+        PostgreSQL-->>TokenService: User entity
+
+        TokenService->>TokenService: Check user.is_blocked
+
+        alt User is blocked
+            TokenService-->>AuthService: UserBlockedException(AUTH_USER_BLOCKED)
+            AuthService-->>AuthController: AuthenticationException(AUTH_USER_BLOCKED)
+            AuthController-->>Client: 403 Forbidden
+        else User active
+            AuthService->>TokenService: generateTokenPair(user)
+            TokenService->>KeyManager: getPrivateKey()
+            KeyManager-->>TokenService: PrivateKey (cleared after use)
+
+            TokenService->>TokenService: Sign new access token (RSA)
+            Note right of TokenService: New JWT with fresh iat/exp
+
+            TokenService->>TokenService: Hash new refresh token (bcrypt)
+            Note right of TokenService: bcrypt.hash(newRefreshToken, 10)
+
+            TokenService->>PostgreSQL: BEGIN TRANSACTION
+
+            TokenService->>PostgreSQL: UPDATE refresh_token_keys SET token_hash=?, expires_at=? WHERE user_id=?
+            PostgreSQL-->>TokenService: Updated
+
+            TokenService->>PostgreSQL: COMMIT
+            PostgreSQL-->>TokenService: OK
+
+            TokenService-->>AuthService: {accessToken, refreshToken}
+            AuthService-->>AuthController: {accessToken, refreshToken}
+
+            AuthController->>AuthController: Set-Cookie (httpOnly, secure, sameSite=strict)
+            AuthController-->>Client: 200 OK + Set-Cookie
+        end
+    end

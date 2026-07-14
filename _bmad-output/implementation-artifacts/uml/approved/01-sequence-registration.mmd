@@ -12,38 +12,42 @@ sequenceDiagram
 
     Client->>AuthController: POST /auth/v1/register
     AuthController->>AuthController: Parse & Validate (RegisterSchema.parse)
-    
+
     AuthController->>AuthService: register(dto)
     AuthService->>UserService: findByEmail(email)
     UserService->>PostgreSQL: SELECT * FROM users WHERE email = ?
     PostgreSQL-->>UserService: null (not found)
-    
+
     AuthService->>UserService: findByUsername(username)
     UserService->>PostgreSQL: SELECT * FROM users WHERE username = ?
     PostgreSQL-->>UserService: null (not found)
-    
+
     AuthService->>AuthService: hashPassword(dto.password)
     Note right of AuthService: bcrypt.hash(password, 10)
-    
-    AuthService->>UserService: create({...dto, password: hash})
-    UserService->>PostgreSQL: INSERT INTO users
-    PostgreSQL-->>UserService: User entity (with UUID)
-    
+
     AuthService->>TokenService: generateTokenPair(user)
     TokenService->>KeyManager: getPrivateKey()
     KeyManager-->>TokenService: PrivateKey (cleared after use)
-    
+
     TokenService->>TokenService: Sign access token (RSA)
     Note right of TokenService: JWT payload: sub, iat, iss, kid, exp
-    
+
     TokenService->>TokenService: Hash refresh token (bcrypt)
     Note right of TokenService: bcrypt.hash(refreshToken, 10)
-    
-    TokenService->>PostgreSQL: INSERT INTO refresh_token_keys (token_hash)
+
+    PostgreSQL->>PostgreSQL: BEGIN TRANSACTION
+
+    AuthService->>UserService: create({...dto, password: hash})
+    UserService->>PostgreSQL: INSERT INTO users
+    PostgreSQL-->>UserService: User entity (with UUID)
+
+    TokenService->>PostgreSQL: INSERT INTO refresh_token_keys (token_hash, user_id)
     PostgreSQL-->>TokenService: RefreshToken entity
-    
+
+    PostgreSQL->>PostgreSQL: COMMIT
+
     TokenService-->>AuthService: {accessToken, refreshToken}
     AuthService-->>AuthController: {accessToken, refreshToken}
-    
+
     AuthController->>AuthController: Set-Cookie (httpOnly, secure, sameSite=strict)
     AuthController-->>Client: 201 Created + Set-Cookie
