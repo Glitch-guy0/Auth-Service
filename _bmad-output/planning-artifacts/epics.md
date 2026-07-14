@@ -390,6 +390,16 @@ So that JWT signing works without manual key generation.
 **When** I run `npm run setup:keys` again
 **Then** it does not overwrite existing keys (or warns before overwriting)
 
+**Test Acceptance Criteria:**
+**Given** no keys.json exists
+**When** setupKeys() is called
+**Then** keys.json is created with all required fields
+**And** file has correct permissions (600)
+
+**Given** keys.json already exists
+**When** setupKeys() is called again
+**Then** it throws an error or warns (does not overwrite)
+
 ### Story 2.2: KeyManager Service
 
 As a developer,
