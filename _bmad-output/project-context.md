@@ -30,8 +30,8 @@ _This file contains critical rules and patterns that AI agents must follow when 
 | Dependency | Version | Purpose |
 |------------|---------|---------|
 | @nestjs/config | 4.0.2 | Environment management |
-| class-validator | 0.14.2 | Input validation |
-| class-transformer | 0.5.1 | Object transformation |
+| zod | 4.4.3 | Input validation (strictly Zod) |
+| nestjs-zod | 5.4.0 | NestJS Zod integration |
 | Jest | 29.7.0 | Testing |
 | ESLint | 9.25.1 | Linting |
 | Prettier | 3.5.3 | Formatting |

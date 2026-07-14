@@ -328,7 +328,7 @@ System has production build and deployment scripts.
 System maintains core data in PostgreSQL.
 
 **Consequences (testable):**
-- Tables: users, user_tokens, refresh_token_keys
+- Tables: users, auth_tokens, refresh_token_keys
 - UUID primary keys (gen_random_uuid())
 - Proper indexes on unique columns
 - Foreign key constraints enforced
@@ -955,24 +955,16 @@ async function bootstrap() {
 
 ```typescript
 // src/modules/auth/dto/register.dto.ts
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsEmail, MinLength } from 'class-validator';
+import { z } from 'zod';
+import { createZodDto } from 'nestjs-zod';
 
-export class RegisterDto {
-  @ApiProperty({ example: 'john_doe', description: 'Unique username' })
-  @IsString()
-  @MinLength(3)
-  username: string;
+export const RegisterSchema = z.object({
+  username: z.string().min(3).max(255),
+  email: z.string().email(),
+  password: z.string().min(8),
+});
 
-  @ApiProperty({ example: 'john@example.com', description: 'Valid email address' })
-  @IsEmail()
-  email: string;
-
-  @ApiProperty({ example: 'securePassword123', description: 'Strong password' })
-  @IsString()
-  @MinLength(8)
-  password: string;
-}
+export class RegisterDto extends createZodDto(RegisterSchema) {}
 ```
 
 **Controller Documentation:**
@@ -1087,6 +1079,7 @@ export class AuthController {
 | **Folder Structure** | Feature-based modules | Scalability + maintainability |
 | **Imports** | Path aliases via package.json | Clean import statements |
 | **API Docs** | Swagger/NestJS plugin | Auto-generated, interactive |
+| **Validation** | Zod (strictly) | Runtime validation with TypeScript type inference |
 | **UML** | Excalidraw diagrams | Visual architecture docs |
 
 ---
@@ -1097,6 +1090,7 @@ export class AuthController {
 - **Key Management**: Per-instance RSA keys, private key never in DB
 - **Database**: PostgreSQL (core) + MongoDB (logging) + Redis (blacklist)
 - **ORM**: TypeORM for PostgreSQL — mature, good NestJS integration, supports UUID
+- **Validation**: Zod (strictly) — runtime validation with TypeScript type inference
 - **Logging**: Console only (pino + chalk) — no external monitoring for v1
 
 ### Development Setup

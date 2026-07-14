@@ -104,17 +104,13 @@ CREATE TABLE users (
 );
 ```
 
-#### Schema: `user_tokens`
+#### Schema: `auth_tokens`
 
 ```sql
-CREATE TABLE user_tokens (
+CREATE TABLE auth_tokens (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-    refresh_token VARCHAR(255) NOT NULL,      -- bcrypt hashed
-    refresh_token_expiry TIMESTAMP NOT NULL,
-    reset_token VARCHAR(255),                 -- bcrypt hashed
-    reset_token_expiry TIMESTAMP,
-    refresh_token_created_at TIMESTAMP DEFAULT NOW(),
-    reset_token_created_at TIMESTAMP,
+    token_hash VARCHAR(255) NOT NULL,          -- bcrypt hashed refresh token
+    expires_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP DEFAULT NOW()
 );
 ```
@@ -295,10 +291,11 @@ Key Expiry
 │  POST /auth/v1/logout                                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  1. Get access token from request                                           │
-│  2. Add to Redis blacklist (TTL = token expiry)                             │
-│  3. Delete refresh token from DB                                            │
-│  4. Clear refresh token cookie                                              │
-│  5. Log logout event                                                        │
+│  2. Verify access token                                                     │
+│  3. Extract user_id                                                         │
+│  4. Add access token to Redis blacklist (TTL = token expiry)                │
+│  5. Delete refresh token from DB by user_id                                 │
+│  6. Clear refresh token cookie                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -647,7 +644,7 @@ class AwsSecretsManagerProvider implements ISecretProvider {
 | JWT Library | jose | RSA signing, JWK support |
 | Password Hash | bcrypt | Industry standard |
 | Logger | pino + chalk | Fast, colorful console output |
-| Validation | class-validator | NestJS integration |
+| Validation | Zod (strictly) | Runtime validation with TypeScript type inference |
 | ORM | Prisma or TypeORM | Database abstraction |
 
 ---
