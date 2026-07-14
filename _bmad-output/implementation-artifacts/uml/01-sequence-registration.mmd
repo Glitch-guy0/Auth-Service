@@ -36,7 +36,10 @@ sequenceDiagram
     TokenService->>TokenService: Sign access token (RSA)
     Note right of TokenService: JWT payload: sub, iat, iss, kid, exp
     
-    TokenService->>PostgreSQL: INSERT INTO refresh_token_keys
+    TokenService->>TokenService: Hash refresh token (bcrypt)
+    Note right of TokenService: bcrypt.hash(refreshToken, 10)
+    
+    TokenService->>PostgreSQL: INSERT INTO refresh_token_keys (token_hash)
     PostgreSQL-->>TokenService: RefreshToken entity
     
     TokenService-->>AuthService: {accessToken, refreshToken}

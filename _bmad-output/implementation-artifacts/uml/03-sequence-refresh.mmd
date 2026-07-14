@@ -16,10 +16,13 @@ sequenceDiagram
     AuthController->>AuthService: refresh(refreshToken)
     
     AuthService->>TokenService: validateRefreshToken(refreshToken)
-    TokenService->>PostgreSQL: SELECT * FROM refresh_token_keys WHERE token_hash = ?
-    PostgreSQL-->>TokenService: RefreshToken entity
+    TokenService->>PostgreSQL: SELECT * FROM refresh_token_keys
+    PostgreSQL-->>TokenService: RefreshToken[] (all hashed tokens)
     
-    alt Token not found
+    TokenService->>TokenService: Validate with bcrypt
+    Note right of TokenService: bcrypt.compare(refreshToken, token_hash)
+    
+    alt Token not found / Invalid
         TokenService-->>AuthService: TokenRevokedException(TOKEN_REVOKED)
         AuthService-->>AuthController: AuthenticationException(TOKEN_REVOKED)
         AuthController-->>Client: 401 Unauthorized
@@ -42,7 +45,10 @@ sequenceDiagram
         TokenService->>TokenService: Sign new access token (RSA)
         Note right of TokenService: New JWT with fresh iat/exp
         
-        TokenService->>PostgreSQL: INSERT INTO refresh_token_keys
+        TokenService->>TokenService: Hash new refresh token (bcrypt)
+        Note right of TokenService: bcrypt.hash(newRefreshToken, 10)
+        
+        TokenService->>PostgreSQL: INSERT INTO refresh_token_keys (token_hash)
         PostgreSQL-->>TokenService: New RefreshToken entity
         
         TokenService-->>AuthService: {accessToken, refreshToken}
