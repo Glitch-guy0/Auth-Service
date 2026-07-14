@@ -1,6 +1,6 @@
 %% User Registration Sequence
 %% Maps to: FR-1, FR-5, FR-13
-%% Transaction ownership: createTransaction(callback) pattern
+%% Two separate transactions: user creation, then token storage
 
 sequenceDiagram
     participant Client
@@ -27,6 +27,17 @@ sequenceDiagram
     AuthService->>AuthService: hashPassword(dto.password)
     Note right of AuthService: bcrypt.hash(password, 10)
 
+    rect rgb(230, 245, 255)
+        Note over Transaction,PostgreSQL: Transaction 1 — User Creation
+        AuthService->>Transaction: createTransaction(async (tx) => { ... })
+        Transaction->>PostgreSQL: BEGIN TRANSACTION
+        Transaction->>UserService: create({...dto, password: hash})
+        UserService->>PostgreSQL: INSERT INTO users
+        PostgreSQL-->>UserService: User entity (with UUID)
+        Transaction->>Transaction: Auto-commit (no error)
+        Transaction->>PostgreSQL: COMMIT
+    end
+
     AuthService->>TokenService: generateTokenPair(user)
     TokenService->>KeyManager: getPrivateKey()
     KeyManager-->>TokenService: PrivateKey (cleared after use)
@@ -37,20 +48,18 @@ sequenceDiagram
     TokenService->>TokenService: Hash refresh token (bcrypt)
     Note right of TokenService: bcrypt.hash(refreshToken, 10)
 
-    AuthService->>Transaction: createTransaction(async (tx) => { ... })
-    Transaction->>PostgreSQL: BEGIN TRANSACTION
+    rect rgb(255, 245, 230)
+        Note over Transaction,PostgreSQL: Transaction 2 — Token Storage
+        AuthService->>Transaction: createTransaction(async (tx) => { ... })
+        Transaction->>PostgreSQL: BEGIN TRANSACTION
+        Transaction->>TokenService: storeToken(tokenHash, userId)
+        TokenService->>PostgreSQL: INSERT INTO auth_tokens (token_hash, token_type, user_id, expires_at)
+        PostgreSQL-->>TokenService: AuthToken entity
+        Transaction->>Transaction: Auto-commit (no error)
+        Transaction->>PostgreSQL: COMMIT
+    end
 
-    Transaction->>UserService: create({...dto, password: hash})
-    UserService->>PostgreSQL: INSERT INTO users
-    PostgreSQL-->>UserService: User entity (with UUID)
-
-    Transaction->>TokenService: storeToken(tokenHash, userId)
-    TokenService->>PostgreSQL: INSERT INTO auth_tokens (token_hash, token_type, user_id, expires_at)
-    PostgreSQL-->>TokenService: AuthToken entity
-
-    Transaction->>Transaction: Auto-commit (no error)
-    Transaction->>PostgreSQL: COMMIT
-    Transaction->>Transaction: discard()
+    AuthService->>Transaction: discard()
     Note right of Transaction: Explicitly releases tx object
 
     TokenService-->>AuthService: {accessToken, refreshToken}
