@@ -4,6 +4,7 @@ import { AuthModule } from '@modules/auth/auth.module';
 import { UserModule } from '@modules/user/user.module';
 import { TokenModule } from '@modules/token/token.module';
 import { LoggingModule } from '@modules/logging/logging.module';
+import { KeyModule } from '@modules/key/key.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { LoggingModule } from '@modules/logging/logging.module';
     UserModule,
     TokenModule,
     LoggingModule,
+    KeyModule,
   ],
 })
 export class AppModule {}

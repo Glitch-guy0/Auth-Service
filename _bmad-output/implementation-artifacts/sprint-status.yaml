@@ -69,11 +69,11 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Key Management
-  epic-2: backlog
-  2-1-key-generation-script: backlog
-  2-2-keymanager-service: backlog
-  2-3-keymanager-module-registration: backlog
-  epic-2-retrospective: optional
+  epic-2: done
+  2-1-key-generation-script: done
+  2-2-keymanager-service: done
+  2-3-keymanager-module-registration: done
+  epic-2-retrospective: done
 
   # Epic 3: Registration Flow
   epic-3: backlog
@@ -129,4 +129,16 @@ development_status:
   9-5-docker-configuration: backlog
   epic-9-retrospective: optional
 
-action_items: []
+action_items:
+  - id: retro-2-1
+    description: "Add integration test for real npm run setup:keys flow"
+    owner: Dana (QA)
+    priority: medium
+    status: open
+    epic: 2
+  - id: retro-2-2
+    description: "Document key rotation strategy for future epic"
+    owner: Charlie (Dev)
+    priority: low
+    status: open
+    epic: 2
