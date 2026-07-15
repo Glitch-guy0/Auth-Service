@@ -66,7 +66,7 @@ development_status:
   1-14-transaction-pattern: done
   1-15-jwt-payload-type: done
   1-16-api-response-types: done
-  epic-1-retrospective: optional
+  epic-1-retrospective: done
 
   # Epic 2: Key Management
   epic-2: done
@@ -130,6 +130,18 @@ development_status:
   epic-9-retrospective: optional
 
 action_items:
+  - id: retro-1-1
+    description: "Consider batching small foundation stories in future epics"
+    owner: Amelia (Dev)
+    priority: low
+    status: open
+    epic: 1
+  - id: retro-1-2
+    description: "Add integration test coverage in Epic 9 for all Epic 1 components"
+    owner: Dana (QA)
+    priority: medium
+    status: open
+    epic: 1
   - id: retro-2-1
     description: "Add integration test for real npm run setup:keys flow"
     owner: Dana (QA)
