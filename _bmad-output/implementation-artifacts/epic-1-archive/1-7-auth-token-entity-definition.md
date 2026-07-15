@@ -4,7 +4,7 @@ story_key: 1-7-auth-token-entity-definition
 story_title: "Auth Token Entity Definition"
 epic_num: 1
 story_num: 7
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

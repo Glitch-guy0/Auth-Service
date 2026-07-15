@@ -4,7 +4,7 @@ story_key: 1-13-exception-hierarchy
 story_title: "Exception Hierarchy"
 epic_num: 1
 story_num: 13
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

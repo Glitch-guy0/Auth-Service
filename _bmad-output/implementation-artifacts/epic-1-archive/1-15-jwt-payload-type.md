@@ -4,7 +4,7 @@ story_key: 1-15-jwt-payload-type
 story_title: "JWT Payload Type"
 epic_num: 1
 story_num: 15
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

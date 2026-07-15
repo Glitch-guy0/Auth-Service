@@ -4,7 +4,7 @@ story_key: 1-5-nestjs-app-module-structure
 story_title: "NestJS App Module Structure"
 epic_num: 1
 story_num: 5
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

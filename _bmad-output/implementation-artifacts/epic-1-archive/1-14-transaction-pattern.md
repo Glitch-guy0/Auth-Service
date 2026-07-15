@@ -4,7 +4,7 @@ story_key: 1-14-transaction-pattern
 story_title: "Transaction Pattern"
 epic_num: 1
 story_num: 14
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

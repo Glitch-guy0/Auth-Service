@@ -4,7 +4,7 @@ story_key: 1-12-service-interfaces-ports
 story_title: "Service Interfaces (Ports)"
 epic_num: 1
 story_num: 12
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

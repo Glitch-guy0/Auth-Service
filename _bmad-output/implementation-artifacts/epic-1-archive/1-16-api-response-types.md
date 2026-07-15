@@ -4,7 +4,7 @@ story_key: 1-16-api-response-types
 story_title: "API Response Types"
 epic_num: 1
 story_num: 16
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

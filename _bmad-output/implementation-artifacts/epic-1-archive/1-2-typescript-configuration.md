@@ -4,7 +4,7 @@ story_key: 1-2-typescript-configuration
 story_title: "TypeScript Configuration"
 epic_num: 1
 story_num: 2
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

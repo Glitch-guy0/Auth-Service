@@ -4,7 +4,7 @@ story_key: 1-11-dtos-token-response
 story_title: "DTOs — Token Response"
 epic_num: 1
 story_num: 11
-status: ready-for-dev
+status: done
 created_date: 2026-07-15
 ---
 

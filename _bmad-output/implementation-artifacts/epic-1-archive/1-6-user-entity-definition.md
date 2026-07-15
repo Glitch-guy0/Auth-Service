@@ -4,7 +4,7 @@ story_key: 1-6-user-entity-definition
 story_title: "User Entity Definition"
 epic_num: 1
 story_num: 6
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

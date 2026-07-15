@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-07-14T21:30:00.000Z
-last_updated: 2026-07-15T00:00:00.000Z
+last_updated: 2026-07-15T12:00:00.000Z
 project: AuthService
 project_key: NOKEY
 tracking_system: file-system
@@ -49,23 +49,23 @@ story_location: "{project-root}/_bmad-output/implementation-artifacts"
 
 development_status:
   # Epic 1: Foundation & Types
-  epic-1: in-progress
-  1-1-nestjs-project-initialization: ready-for-dev
-  1-2-typescript-configuration: ready-for-dev
-  1-3-environment-configuration: ready-for-dev
-  1-4-appcontext-global-state: ready-for-dev
-  1-5-nestjs-app-module-structure: ready-for-dev
-  1-6-user-entity-definition: ready-for-dev
-  1-7-auth-token-entity-definition: ready-for-dev
-  1-8-public-key-registry-entity: ready-for-dev
-  1-9-demographics-document-mongodb: ready-for-dev
-  1-10-dtos-register-login: ready-for-dev
-  1-11-dtos-token-response: ready-for-dev
-  1-12-service-interfaces-ports: ready-for-dev
-  1-13-exception-hierarchy: ready-for-dev
-  1-14-transaction-pattern: ready-for-dev
-  1-15-jwt-payload-type: ready-for-dev
-  1-16-api-response-types: ready-for-dev
+  epic-1: done
+  1-1-nestjs-project-initialization: done
+  1-2-typescript-configuration: done
+  1-3-environment-configuration: done
+  1-4-appcontext-global-state: done
+  1-5-nestjs-app-module-structure: done
+  1-6-user-entity-definition: done
+  1-7-auth-token-entity-definition: done
+  1-8-public-key-registry-entity: done
+  1-9-demographics-document-mongodb: done
+  1-10-dtos-register-login: done
+  1-11-dtos-token-response: done
+  1-12-service-interfaces-ports: done
+  1-13-exception-hierarchy: done
+  1-14-transaction-pattern: done
+  1-15-jwt-payload-type: done
+  1-16-api-response-types: done
   epic-1-retrospective: optional
 
   # Epic 2: Key Management

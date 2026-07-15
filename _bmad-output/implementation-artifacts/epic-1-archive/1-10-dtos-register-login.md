@@ -4,7 +4,7 @@ story_key: 1-10-dtos-register-login
 story_title: "DTOs — Register & Login"
 epic_num: 1
 story_num: 10
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

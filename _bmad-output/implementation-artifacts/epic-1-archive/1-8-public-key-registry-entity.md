@@ -4,7 +4,7 @@ story_key: 1-8-public-key-registry-entity
 story_title: "Public Key Registry Entity"
 epic_num: 1
 story_num: 8
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

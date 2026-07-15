@@ -4,7 +4,7 @@ story_key: 1-4-appcontext-global-state
 story_title: "AppContext Global State"
 epic_num: 1
 story_num: 4
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

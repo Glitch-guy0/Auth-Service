@@ -4,7 +4,7 @@ story_key: 1-1-nestjs-project-initialization
 story_title: "NestJS Project Initialization"
 epic_num: 1
 story_num: 1
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

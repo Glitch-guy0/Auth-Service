@@ -4,7 +4,7 @@ story_key: 1-3-environment-configuration
 story_title: "Environment Configuration"
 epic_num: 1
 story_num: 3
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 

@@ -4,7 +4,7 @@ story_key: 1-9-demographics-document-mongodb
 story_title: "Demographics Document (MongoDB)"
 epic_num: 1
 story_num: 9
-status: ready-for-dev
+status: done
 created_date: 2025-01-01
 ---
 
