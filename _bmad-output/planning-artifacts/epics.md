@@ -660,8 +660,8 @@ So that sessions can be terminated.
 **When** AuthService.logout(accessToken) is called
 **Then** it verifies the access token
 **Then** it extracts user_id
-**Then** it adds access token to Redis blacklist (TTL = token expiry)
-**Then** it deletes refresh token from DB by user_id
+**Then** it deletes refresh token from DB by user_id (PostgreSQL first, per AD-17)
+**Then** it adds access token to Redis blacklist (TTL = token expiry) (Redis second, self-healing via TTL)
 **And** silently succeeds if token was already invalid/expired
 
 ### Story 6.2: Auth Controller — Logout Endpoint
@@ -676,6 +676,7 @@ So that users can logout via HTTP.
 **When** I check AuthController
 **Then** POST /auth/v1/logout endpoint exists
 **And** it reads access token from Authorization header
+**And** it deletes refresh token from DB first (per AD-17)
 **And** it adds access token to Redis blacklist
 **And** it clears refresh token cookie
 **And** it returns 200 on success

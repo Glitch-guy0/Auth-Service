@@ -293,8 +293,8 @@ Key Expiry
 │  1. Get access token from request                                           │
 │  2. Verify access token                                                     │
 │  3. Extract user_id                                                         │
-│  4. Add access token to Redis blacklist (TTL = token expiry)                │
-│  5. Delete refresh token from DB by user_id                                 │
+│  4. Delete refresh token from DB by user_id (PostgreSQL first)              │
+│  5. Add access token to Redis blacklist (TTL = token expiry) (Redis second) │
 │  6. Clear refresh token cookie                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
