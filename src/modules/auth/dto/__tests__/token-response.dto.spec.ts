@@ -2,7 +2,9 @@ import { TokenResponseSchema, TokenResponseDto } from '../token-response.dto';
 
 describe('TokenResponseSchema', () => {
   const validInput = {
-    accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0',
+    accessToken:
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0',
+    refreshToken: 'refresh-token-value',
     expiresIn: 3600,
   };
 
@@ -14,6 +16,7 @@ describe('TokenResponseSchema', () => {
   it('should accept any valid string as accessToken', () => {
     const result = TokenResponseSchema.safeParse({
       accessToken: 'some-token',
+      refreshToken: 'refresh-token',
       expiresIn: 1800,
     });
     expect(result.success).toBe(true);
@@ -22,6 +25,7 @@ describe('TokenResponseSchema', () => {
   it('should accept expiresIn as zero', () => {
     const result = TokenResponseSchema.safeParse({
       accessToken: 'token',
+      refreshToken: 'refresh-token',
       expiresIn: 0,
     });
     expect(result.success).toBe(true);
@@ -30,6 +34,7 @@ describe('TokenResponseSchema', () => {
   it('should accept expiresIn as a very large number', () => {
     const result = TokenResponseSchema.safeParse({
       accessToken: 'token',
+      refreshToken: 'refresh-token',
       expiresIn: 999999999,
     });
     expect(result.success).toBe(true);
@@ -97,9 +102,13 @@ describe('TokenResponseDto type', () => {
   it('should have correct shape', () => {
     const dto: TokenResponseDto = {
       accessToken: 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0',
+      refreshToken: 'refresh-token-value',
       expiresIn: 7200,
     };
-    expect(dto.accessToken).toBe('eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0');
+    expect(dto.accessToken).toBe(
+      'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0',
+    );
+    expect(dto.refreshToken).toBe('refresh-token-value');
     expect(dto.expiresIn).toBe(7200);
   });
 });

@@ -76,13 +76,13 @@ development_status:
   epic-2-retrospective: done
 
   # Epic 3: Registration Flow
-  epic-3: backlog
-  3-1-tokenservice-jwt-generation: backlog
-  3-2-tokenservice-refresh-token: backlog
-  3-3-tokenservice-token-storage: backlog
-  3-4-userservice-user-crud: backlog
-  3-5-authservice-registration-logic: backlog
-  3-6-auth-controller-register-endpoint: backlog
+  epic-3: done
+  3-1-tokenservice-jwt-generation: done
+  3-2-tokenservice-refresh-token: done
+  3-3-tokenservice-token-storage: done
+  3-4-user-service-crud: done
+  3-5-auth-service-registration: done
+  3-6-auth-controller-register: done
   epic-3-retrospective: optional
 
   # Epic 4: Login Flow
