@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-07-14T21:30:00.000Z
-last_updated: 2026-07-15T12:00:00.000Z
+last_updated: 2026-07-16T12:00:00.000Z
 project: AuthService
 project_key: NOKEY
 tracking_system: file-system
@@ -86,11 +86,11 @@ development_status:
   epic-3-retrospective: done
 
   # Epic 4: Login Flow
-  epic-4: backlog
-  4-1-tokenservice-token-verification: backlog
-  4-2-authservice-login-logic: backlog
-  4-3-auth-controller-login-endpoint: backlog
-  epic-4-retrospective: optional
+  epic-4: done
+  4-1-tokenservice-token-verification: done
+  4-2-authservice-login-logic: done
+  4-3-auth-controller-login-endpoint: done
+  epic-4-retrospective: done
 
   # Epic 5: Token Refresh Flow
   epic-5: backlog
@@ -166,3 +166,21 @@ action_items:
     priority: medium
     status: open
     epic: 3
+  - id: retro-4-1
+    description: "Add Dev Agent Record completion as story done criterion"
+    owner: Amelia (Dev)
+    priority: medium
+    status: open
+    epic: 4
+  - id: retro-4-2
+    description: "Document token storage contract in ITokenService port interface"
+    owner: Charlie (Dev)
+    priority: medium
+    status: open
+    epic: 4
+  - id: retro-4-3
+    description: "Add review-to-done transition criteria to story workflow"
+    owner: Prajwal (Project Lead)
+    priority: low
+    status: open
+    epic: 4

@@ -2,7 +2,7 @@ import { Injectable, Logger, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SignJWT, importPKCS8 } from 'jose';
+import { SignJWT, importPKCS8, jwtVerify, importSPKI } from 'jose';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { ITokenService } from '../../common/ports/token.port';
@@ -11,6 +11,7 @@ import { KEY_MANAGER } from '../../common/ports/key-manager.token';
 import { JwtPayload } from '../../types/jwt.types';
 import { TokenResponseDto } from '../auth/dto/token-response.dto';
 import { AuthToken } from './auth-token.entity';
+import { TokenInvalidSignatureException, TokenExpiredException } from '../../shared/exceptions/authentication.exception';
 
 interface RefreshTokenResult {
   rawToken: string;
@@ -48,8 +49,49 @@ export class TokenService implements ITokenService {
     this.logger.debug(`Token stored for user ${userId}`);
   }
 
-  async verifyAccessToken(_token: string): Promise<{ userId: string }> {
-    throw new Error('Not implemented');
+  async verifyAccessToken(token: string): Promise<{ userId: string }> {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        throw new TokenInvalidSignatureException('Malformed token: expected 3 segments');
+      }
+
+      const [, headerBase64] = parts;
+      const header = JSON.parse(Buffer.from(headerBase64, 'base64url').toString());
+      const kid = header.kid;
+
+      if (!kid) {
+        throw new TokenInvalidSignatureException('Missing kid in JWT header');
+      }
+
+      const publicKey = await this.keyManager.getPublicKey(kid);
+      if (!publicKey) {
+        throw new TokenInvalidSignatureException('Public key not found for kid');
+      }
+
+      const publicKeyObject = await importSPKI(publicKey, this.algorithm);
+      const { payload } = await jwtVerify(token, publicKeyObject, {
+        algorithms: [this.algorithm],
+      });
+
+      this.logger.debug(`Access token verified for user ${payload.sub}`);
+      return { userId: payload.sub as string };
+    } catch (error: unknown) {
+      if (error instanceof TokenInvalidSignatureException || error instanceof TokenExpiredException) {
+        throw error;
+      }
+
+      const err = error as Error;
+      if (err.name === 'JWTExpired') {
+        throw new TokenExpiredException('Token has expired');
+      }
+
+      if (err.name === 'JWTClaimValidationFailed' || err.name === 'JWSSignatureVerificationFailed') {
+        throw new TokenInvalidSignatureException('Invalid token signature');
+      }
+
+      throw new TokenInvalidSignatureException('Token verification failed');
+    }
   }
 
   private async generateAccessToken(userId: string): Promise<string> {

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { generateKeyPair, exportPKCS8, jwtVerify } from 'jose';
+import { generateKeyPair, exportPKCS8, exportSPKI, importPKCS8, jwtVerify, SignJWT } from 'jose';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { TokenService } from '../token.service';
@@ -8,6 +8,7 @@ import { IKeyManager } from '../../../common/ports/key-manager.port';
 import { KEY_MANAGER } from '../../../common/ports/key-manager.token';
 import { AuthToken } from '../auth-token.entity';
 import { Repository } from 'typeorm';
+import { TokenInvalidSignatureException, TokenExpiredException } from '../../../shared/exceptions/authentication.exception';
 
 jest.mock('crypto');
 jest.mock('bcrypt', () => {
@@ -71,9 +72,7 @@ describe('TokenService', () => {
       await expect(service.generateTokenPair('user-1')).rejects.toThrow('Not implemented');
     });
 
-    it('should throw "Not implemented" for verifyAccessToken', async () => {
-      await expect(service.verifyAccessToken('token')).rejects.toThrow('Not implemented');
-    });
+
 
     it('should throw error when getPrivateKey fails', async () => {
       keyManagerMock.getPrivateKey.mockRejectedValue(new Error('Key unavailable'));
@@ -203,6 +202,109 @@ describe('TokenService', () => {
       await expect((service as any).generateRefreshToken()).rejects.toThrow(
         'hash failed',
       );
+    });
+  });
+
+  describe('verifyAccessToken', () => {
+    let testPublicKeyStr: string;
+    let wrongKeyPair: CryptoKeyPair;
+
+    beforeAll(async () => {
+      testPublicKeyStr = await exportSPKI(testPublicKey);
+      wrongKeyPair = await generateKeyPair('RS256', { extractable: true, modulusLength: 2048 });
+    });
+
+    beforeEach(() => {
+      keyManagerMock.getPublicKey.mockResolvedValue(testPublicKeyStr);
+    });
+
+    it('should return userId for valid signed JWT', async () => {
+      const privateKeyObj = await importPKCS8(testPrivateKey, 'RS256');
+      const token = await new SignJWT({ sub: 'user-123', iss: 'test-issuer', kid: 'test-kid-123' })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-kid-123' })
+        .setIssuedAt()
+        .setExpirationTime('1h')
+        .sign(privateKeyObj);
+
+      const result = await service.verifyAccessToken(token);
+      expect(result).toEqual({ userId: 'user-123' });
+    });
+
+    it('should throw TokenInvalidSignatureException for invalid signature', async () => {
+      const wrongPrivateKey = await exportPKCS8(wrongKeyPair.privateKey);
+      const wrongPrivateKeyObj = await importPKCS8(wrongPrivateKey, 'RS256');
+      const token = await new SignJWT({ sub: 'user-123', iss: 'test-issuer', kid: 'test-kid-123' })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-kid-123' })
+        .setIssuedAt()
+        .setExpirationTime('1h')
+        .sign(wrongPrivateKeyObj);
+
+      await expect(service.verifyAccessToken(token)).rejects.toThrow(TokenInvalidSignatureException);
+    });
+
+    it('should throw TokenExpiredException for expired token', async () => {
+      const privateKeyObj = await importPKCS8(testPrivateKey, 'RS256');
+      const token = await new SignJWT({ sub: 'user-123', iss: 'test-issuer', kid: 'test-kid-123' })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-kid-123' })
+        .setIssuedAt(Math.floor(Date.now() / 1000) - 3600)
+        .setExpirationTime(Math.floor(Date.now() / 1000) - 1)
+        .sign(privateKeyObj);
+
+      await expect(service.verifyAccessToken(token)).rejects.toThrow(TokenExpiredException);
+    });
+
+    it('should throw TokenInvalidSignatureException for malformed token', async () => {
+      await expect(service.verifyAccessToken('not.a.valid.token')).rejects.toThrow(TokenInvalidSignatureException);
+    });
+
+    it('should throw TokenInvalidSignatureException for missing kid', async () => {
+      const privateKeyObj = await importPKCS8(testPrivateKey, 'RS256');
+      const token = await new SignJWT({ sub: 'user-123', iss: 'test-issuer' })
+        .setProtectedHeader({ alg: 'RS256' })
+        .setIssuedAt()
+        .setExpirationTime('1h')
+        .sign(privateKeyObj);
+
+      await expect(service.verifyAccessToken(token)).rejects.toThrow(TokenInvalidSignatureException);
+    });
+
+    it('should call getPublicKey with correct kid', async () => {
+      const privateKeyObj = await importPKCS8(testPrivateKey, 'RS256');
+      const token = await new SignJWT({ sub: 'user-123', iss: 'test-issuer', kid: 'test-kid-123' })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-kid-123' })
+        .setIssuedAt()
+        .setExpirationTime('1h')
+        .sign(privateKeyObj);
+
+      await service.verifyAccessToken(token);
+      expect(keyManagerMock.getPublicKey).toHaveBeenCalledWith('test-kid-123');
+    });
+
+    it('should throw TokenInvalidSignatureException when public key not found', async () => {
+      keyManagerMock.getPublicKey.mockResolvedValue(null as any);
+      const privateKeyObj = await importPKCS8(testPrivateKey, 'RS256');
+      const token = await new SignJWT({ sub: 'user-123', iss: 'test-issuer', kid: 'test-kid-123' })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-kid-123' })
+        .setIssuedAt()
+        .setExpirationTime('1h')
+        .sign(privateKeyObj);
+
+      await expect(service.verifyAccessToken(token)).rejects.toThrow(TokenInvalidSignatureException);
+    });
+
+    it('should only accept RS256 algorithm', async () => {
+      const { publicKey: hs256PublicKey } = await generateKeyPair('RS256', { extractable: true });
+      const privateKeyObj = await importPKCS8(testPrivateKey, 'RS256');
+      
+      const token = await new SignJWT({ sub: 'user-123', iss: 'test-issuer', kid: 'test-kid-123' })
+        .setProtectedHeader({ alg: 'RS256', kid: 'test-kid-123' })
+        .setIssuedAt()
+        .setExpirationTime('1h')
+        .sign(privateKeyObj);
+
+      keyManagerMock.getPublicKey.mockResolvedValue(await exportSPKI(hs256PublicKey));
+      
+      await expect(service.verifyAccessToken(token)).rejects.toThrow(TokenInvalidSignatureException);
     });
   });
 

@@ -4,8 +4,11 @@ import { IAuthService } from '../../common/ports/auth.port';
 import { IUserService } from '../../common/ports/user.port';
 import { ITokenService } from '../../common/ports/token.port';
 import { RegisterDto } from './dto/register.dto';
+import { LoginDto } from './dto/login.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
 import { UserExistsException } from '../../shared/exceptions/validation.exception';
+import { InvalidCredentialsException } from '../../shared/exceptions/authentication.exception';
+import { UserBlockedException } from '../../shared/exceptions/authorization.exception';
 import { USER_SERVICE } from '../../common/ports/user.token';
 import { TOKEN_SERVICE } from '../../common/ports/token.token';
 
@@ -53,8 +56,41 @@ export class AuthService implements IAuthService {
     return tokens;
   }
 
-  async login(_dto: any): Promise<TokenResponseDto> {
-    throw new Error('Not implemented');
+  async login(dto: LoginDto): Promise<TokenResponseDto> {
+    this.logger.log(`Login attempt for: ${dto.usernameOrEmail}`);
+
+    const user = dto.usernameOrEmail.includes('@')
+      ? await this.userService.findByEmail(dto.usernameOrEmail)
+      : await this.userService.findByUsername(dto.usernameOrEmail);
+
+    if (!user) {
+      this.logger.warn(`Login failed: user not found for ${dto.usernameOrEmail}`);
+      throw new InvalidCredentialsException();
+    }
+
+    if (user.blocked) {
+      this.logger.warn(`Login blocked: user ${user.id} is blocked`);
+      throw new UserBlockedException();
+    }
+
+    const valid = await bcrypt.compare(dto.password, user.password);
+    if (!valid) {
+      this.logger.warn(`Login failed: invalid password for user ${user.id}`);
+      throw new InvalidCredentialsException();
+    }
+
+    const tokens = await this.tokenService.generateTokenPair(user.id);
+
+    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, this.BCRYPT_SALT_ROUNDS);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + this.REFRESH_TOKEN_EXPIRY_DAYS);
+    await this.tokenService.storeToken(user.id, refreshTokenHash, expiresAt);
+
+    this.userService.logDemographics(user.id, '').catch(() => {});
+
+    this.logger.log(`Login successful for user: ${user.id}`);
+
+    return tokens;
   }
 
   async refresh(_refreshToken: string): Promise<TokenResponseDto> {

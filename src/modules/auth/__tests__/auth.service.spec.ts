@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { AuthService } from '../auth.service';
 import { UserExistsException } from '@shared/exceptions/validation.exception';
+import { InvalidCredentialsException } from '@shared/exceptions/authentication.exception';
+import { UserBlockedException } from '@shared/exceptions/authorization.exception';
 import { RegisterDto } from '@modules/auth/dto/register.dto';
+import { LoginDto } from '@modules/auth/dto/login.dto';
 import { User } from '@modules/user/user.entity';
 import { USER_SERVICE } from '../../../common/ports/user.token';
 import { TOKEN_SERVICE } from '../../../common/ports/token.token';
@@ -175,10 +178,78 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should throw not implemented', async () => {
-      await expect(service.login(validDto)).rejects.toThrow(
-        'Not implemented',
+    const loginDto: LoginDto = {
+      usernameOrEmail: 'test@example.com',
+      password: 'password123',
+    };
+
+    beforeEach(() => {
+      userService.findByEmail.mockResolvedValue(mockUser);
+      userService.findByUsername.mockResolvedValue(null);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      tokenService.generateTokenPair.mockResolvedValue(mockTokens);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-refresh-token');
+      userService.logDemographics.mockResolvedValue(undefined);
+    });
+
+    it('should return tokens for valid email login', async () => {
+      const result = await service.login(loginDto);
+      expect(result).toEqual(mockTokens);
+    });
+
+    it('should return tokens for valid username login', async () => {
+      const usernameDto: LoginDto = { usernameOrEmail: 'testuser', password: 'password123' };
+      userService.findByUsername.mockResolvedValue(mockUser);
+      userService.findByEmail.mockResolvedValue(null);
+
+      const result = await service.login(usernameDto);
+      expect(result).toEqual(mockTokens);
+    });
+
+    it('should throw InvalidCredentialsException for non-existent user', async () => {
+      userService.findByEmail.mockResolvedValue(null);
+
+      await expect(service.login(loginDto)).rejects.toThrow(InvalidCredentialsException);
+    });
+
+    it('should throw InvalidCredentialsException for wrong password', async () => {
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      await expect(service.login(loginDto)).rejects.toThrow(InvalidCredentialsException);
+    });
+
+    it('should throw UserBlockedException for blocked user', async () => {
+      const blockedUser = { ...mockUser, blocked: true };
+      userService.findByEmail.mockResolvedValue(blockedUser);
+
+      await expect(service.login(loginDto)).rejects.toThrow(UserBlockedException);
+    });
+
+    it('should generate token pair with user id', async () => {
+      await service.login(loginDto);
+      expect(tokenService.generateTokenPair).toHaveBeenCalledWith('uuid-123');
+    });
+
+    it('should hash and store refresh token', async () => {
+      await service.login(loginDto);
+      expect(bcrypt.hash).toHaveBeenCalledWith('refresh-token-value', 12);
+      expect(tokenService.storeToken).toHaveBeenCalledWith(
+        'uuid-123',
+        'hashed-refresh-token',
+        expect.any(Date),
       );
+    });
+
+    it('should call logDemographics fire-and-forget', async () => {
+      await service.login(loginDto);
+      expect(userService.logDemographics).toHaveBeenCalledWith('uuid-123', '');
+    });
+
+    it('should still succeed if logDemographics fails', async () => {
+      userService.logDemographics.mockRejectedValue(new Error('MongoDB unavailable'));
+
+      const result = await service.login(loginDto);
+      expect(result).toEqual(mockTokens);
     });
   });
 
