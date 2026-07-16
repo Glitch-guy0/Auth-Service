@@ -83,7 +83,7 @@ development_status:
   3-4-user-service-crud: done
   3-5-auth-service-registration: done
   3-6-auth-controller-register: done
-  epic-3-retrospective: optional
+  epic-3-retrospective: done
 
   # Epic 4: Login Flow
   epic-4: backlog
@@ -154,3 +154,15 @@ action_items:
     priority: low
     status: open
     epic: 2
+  - id: retro-3-1
+    description: "Add unexpected error wrapping as standard controller acceptance criterion in story template"
+    owner: Charlie (Dev)
+    priority: medium
+    status: open
+    epic: 3
+  - id: retro-3-2
+    description: "Finalize port interfaces before implementing dependent stories — apply in Epic 4 Story 4-1"
+    owner: Amelia (Dev)
+    priority: medium
+    status: open
+    epic: 3
