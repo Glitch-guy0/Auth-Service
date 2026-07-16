@@ -1,10 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  BadRequestException,
-  InternalServerErrorException,
-  UnauthorizedException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
 import { RegisterDto, RegisterSchema } from '../dto/register.dto';
@@ -14,6 +9,7 @@ import { UserExistsException } from '../../../shared/exceptions/validation.excep
 import {
   InvalidCredentialsException,
   TokenExpiredException,
+  AuthenticationException,
 } from '../../../shared/exceptions/authentication.exception';
 import { UserBlockedException } from '../../../shared/exceptions/authorization.exception';
 
@@ -79,23 +75,21 @@ describe('AuthController', () => {
       expect(result).toHaveProperty('expiresIn');
     });
 
-    it('should throw ConflictException when user already exists', async () => {
+    it('should throw UserExistsException when user already exists', async () => {
       authService.register.mockRejectedValue(
         new UserExistsException('User already exists with this username'),
       );
 
       await expect(controller.register(validDto)).rejects.toThrow(
-        'User already exists with this username',
+        UserExistsException,
       );
     });
 
-    it('should throw InternalServerErrorException for unexpected errors', async () => {
+    it('should propagate unknown errors directly to filter', async () => {
       const error = new Error('Unexpected error');
       authService.register.mockRejectedValue(error);
 
-      await expect(controller.register(validDto)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(controller.register(validDto)).rejects.toThrow(Error);
     });
   });
 
@@ -133,33 +127,31 @@ describe('AuthController', () => {
       expect(result).toHaveProperty('expiresIn');
     });
 
-    it('should throw UnauthorizedException for invalid credentials', async () => {
+    it('should throw InvalidCredentialsException for invalid credentials', async () => {
       authService.login.mockRejectedValue(
         new InvalidCredentialsException('Invalid email or password'),
       );
 
       await expect(controller.login(loginDto)).rejects.toThrow(
-        UnauthorizedException,
+        InvalidCredentialsException,
       );
     });
 
-    it('should throw ForbiddenException for blocked user', async () => {
+    it('should throw UserBlockedException for blocked user', async () => {
       authService.login.mockRejectedValue(
         new UserBlockedException('User account has been blocked'),
       );
 
       await expect(controller.login(loginDto)).rejects.toThrow(
-        ForbiddenException,
+        UserBlockedException,
       );
     });
 
-    it('should throw InternalServerErrorException for unexpected errors', async () => {
+    it('should propagate unknown errors directly to filter', async () => {
       const error = new Error('Unexpected error');
       authService.login.mockRejectedValue(error);
 
-      await expect(controller.login(loginDto)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(controller.login(loginDto)).rejects.toThrow(Error);
     });
   });
 
@@ -187,7 +179,7 @@ describe('AuthController', () => {
       );
     });
 
-    it('should throw UnauthorizedException for expired token', async () => {
+    it('should throw TokenExpiredException for expired token', async () => {
       authService.refresh.mockRejectedValue(
         new TokenExpiredException('Refresh token has expired'),
       );
@@ -195,10 +187,10 @@ describe('AuthController', () => {
 
       await expect(
         controller.refresh(mockRequest as any, mockResponse as any),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toThrow(TokenExpiredException);
     });
 
-    it('should throw UnauthorizedException for invalid credentials', async () => {
+    it('should throw InvalidCredentialsException for invalid credentials', async () => {
       authService.refresh.mockRejectedValue(
         new InvalidCredentialsException('Invalid refresh token'),
       );
@@ -206,15 +198,15 @@ describe('AuthController', () => {
 
       await expect(
         controller.refresh(mockRequest as any, mockResponse as any),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toThrow(InvalidCredentialsException);
     });
 
-    it('should throw InternalServerErrorException for unexpected errors', async () => {
+    it('should propagate unknown errors directly to filter', async () => {
       authService.refresh.mockRejectedValue(new Error('Unexpected'));
 
       await expect(
         controller.refresh(mockRequest as any, mockResponse as any),
-      ).rejects.toThrow(InternalServerErrorException);
+      ).rejects.toThrow(Error);
     });
   });
 
@@ -241,29 +233,29 @@ describe('AuthController', () => {
       });
     });
 
-    it('should throw UnauthorizedException when Authorization header is missing', async () => {
+    it('should throw AuthenticationException when Authorization header is missing', async () => {
       const mockResponse = { clearCookie: jest.fn() };
 
       await expect(
         controller.logout(undefined as any, mockResponse as any),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toThrow(AuthenticationException);
     });
 
-    it('should throw UnauthorizedException for malformed header (no Bearer prefix)', async () => {
+    it('should throw AuthenticationException for malformed header (no Bearer prefix)', async () => {
       const mockResponse = { clearCookie: jest.fn() };
 
       await expect(
         controller.logout('invalid-header', mockResponse as any),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toThrow(AuthenticationException);
     });
 
-    it('should throw InternalServerErrorException for unexpected errors', async () => {
+    it('should propagate unknown errors directly to filter', async () => {
       authService.logout.mockRejectedValue(new Error('Unexpected'));
       const mockResponse = { clearCookie: jest.fn() };
 
       await expect(
         controller.logout('Bearer valid-token', mockResponse as any),
-      ).rejects.toThrow(InternalServerErrorException);
+      ).rejects.toThrow(Error);
     });
   });
 });

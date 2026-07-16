@@ -22,17 +22,17 @@ describe('LoginSchema', () => {
   it('should accept any non-empty string for usernameOrEmail', () => {
     const result = LoginSchema.safeParse({
       usernameOrEmail: 'anything-goes',
-      password: 'pass',
+      password: 'securepass',
     });
     expect(result.success).toBe(true);
   });
 
-  it('should accept empty strings (service layer validates)', () => {
+  it('should reject empty strings', () => {
     const result = LoginSchema.safeParse({
       usernameOrEmail: '',
       password: '',
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it('should reject missing usernameOrEmail', () => {

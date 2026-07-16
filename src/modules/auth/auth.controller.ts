@@ -6,10 +6,6 @@ import {
   HttpStatus,
   Version,
   Logger,
-  ConflictException,
-  InternalServerErrorException,
-  UnauthorizedException,
-  ForbiddenException,
   Req,
   Res,
   Headers,
@@ -27,12 +23,7 @@ import { RegisterDto, RegisterSchema } from './dto/register.dto';
 import { LoginDto, LoginSchema } from './dto/login.dto';
 import type { TokenResponseDto } from './dto/token-response.dto';
 import { ZodValidationPipe } from './pipes/zod-validation.pipe';
-import { UserExistsException } from '../../shared/exceptions/validation.exception';
-import {
-  InvalidCredentialsException,
-  TokenExpiredException,
-} from '../../shared/exceptions/authentication.exception';
-import { UserBlockedException } from '../../shared/exceptions/authorization.exception';
+import { AuthenticationException } from '../../shared/exceptions/authentication.exception';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -62,16 +53,7 @@ export class AuthController {
   async register(
     @Body(new ZodValidationPipe(RegisterSchema)) dto: RegisterDto,
   ): Promise<TokenResponseDto> {
-    try {
-      return await this.authService.register(dto);
-    } catch (error) {
-      if (error instanceof UserExistsException) {
-        this.logger.warn(`User conflict: ${error.message}`);
-        throw new ConflictException(error.message);
-      }
-      this.logger.error(`Registration failed for ${dto.username}`, error);
-      throw new InternalServerErrorException('Internal server error');
-    }
+    return await this.authService.register(dto);
   }
 
   @Version('v1')
@@ -88,20 +70,7 @@ export class AuthController {
   async login(
     @Body(new ZodValidationPipe(LoginSchema)) dto: LoginDto,
   ): Promise<TokenResponseDto> {
-    try {
-      return await this.authService.login(dto);
-    } catch (error) {
-      if (error instanceof InvalidCredentialsException) {
-        this.logger.warn(`Login failed: ${error.message}`);
-        throw new UnauthorizedException(error.message);
-      }
-      if (error instanceof UserBlockedException) {
-        this.logger.warn(`Login blocked: ${error.message}`);
-        throw new ForbiddenException(error.message);
-      }
-      this.logger.error(`Login failed for ${dto.usernameOrEmail}`, error);
-      throw new InternalServerErrorException('Internal server error');
-    }
+    return await this.authService.login(dto);
   }
 
   @Version('v1')
@@ -115,28 +84,16 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponseDto> {
-    try {
-      const refreshToken = (req as any).cookies?.refreshToken;
-      const tokens = await this.authService.refresh(refreshToken);
+    const refreshToken = (req as any).cookies?.refreshToken;
+    const tokens = await this.authService.refresh(refreshToken);
 
-      res.cookie(
-        'refreshToken',
-        tokens.refreshToken,
-        this.REFRESH_TOKEN_COOKIE_OPTIONS,
-      );
+    res.cookie(
+      'refreshToken',
+      tokens.refreshToken,
+      this.REFRESH_TOKEN_COOKIE_OPTIONS,
+    );
 
-      return tokens;
-    } catch (error) {
-      if (
-        error instanceof TokenExpiredException ||
-        error instanceof InvalidCredentialsException
-      ) {
-        this.logger.warn(`Refresh failed: ${error.message}`);
-        throw new UnauthorizedException(error.message);
-      }
-      this.logger.error('Refresh failed', error);
-      throw new InternalServerErrorException('Internal server error');
-    }
+    return tokens;
   }
 
   @Version('v1')
@@ -154,25 +111,17 @@ export class AuthController {
     @Headers('authorization') authHeader: string,
     @Res({ passthrough: true }) res: Response,
   ): Promise<{ success: true; data: null }> {
-    try {
-      if (!authHeader?.startsWith('Bearer ')) {
-        throw new UnauthorizedException(
-          'Missing or invalid Authorization header',
-        );
-      }
-      const token = authHeader.replace('Bearer ', '');
-
-      await this.authService.logout(token);
-
-      res.clearCookie('refreshToken', { path: '/auth' });
-
-      return { success: true, data: null };
-    } catch (error) {
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      this.logger.error('Logout failed', error);
-      throw new InternalServerErrorException('Internal server error');
+    if (!authHeader?.startsWith('Bearer ')) {
+      throw new AuthenticationException(
+        'Missing or invalid Authorization header',
+      );
     }
+    const token = authHeader.replace('Bearer ', '');
+
+    await this.authService.logout(token);
+
+    res.clearCookie('refreshToken', { path: '/auth' });
+
+    return { success: true, data: null };
   }
 }

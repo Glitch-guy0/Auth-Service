@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-07-14T21:30:00.000Z
-last_updated: 2026-07-16T15:00:00.000Z
+last_updated: 2026-07-16T16:00:00.000Z
 project: AuthService
 project_key: NOKEY
 tracking_system: file-system
@@ -105,12 +105,12 @@ development_status:
   epic-6-retrospective: done
 
   # Epic 7: Auth Guard & Protected Routes
-  epic-7: backlog
-  7-1-auth-middleware: backlog
-  7-2-jwt-auth-guard: backlog
-  7-3-global-exception-filter: backlog
-  7-4-zod-validation-pipe: backlog
-  epic-7-retrospective: optional
+  epic-7: done
+  7-1-auth-middleware: done
+  7-2-jwt-auth-guard: done
+  7-3-global-exception-filter: done
+  7-4-zod-validation-pipe: done
+  epic-7-retrospective: done
 
   # Epic 8: Logging & Observability
   epic-8: backlog
