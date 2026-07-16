@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import { getValidatedEnv } from '@config/env.validator';
 import { setAppContext } from '@config/app-context';
 import { AllExceptionsFilter } from '@shared/exceptions/all-exceptions.filter';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const env = getValidatedEnv();
@@ -24,6 +25,8 @@ async function bootstrap() {
   });
 
   const app = await NestFactory.create(AppModule);
+
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({

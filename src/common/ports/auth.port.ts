@@ -6,5 +6,5 @@ export interface IAuthService {
   register(dto: RegisterDto): Promise<TokenResponseDto>;
   login(dto: LoginDto): Promise<TokenResponseDto>;
   refresh(refreshToken: string): Promise<TokenResponseDto>;
-  logout(userId: string): Promise<void>;
+  logout(accessToken: string): Promise<void>;
 }

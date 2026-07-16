@@ -41,11 +41,11 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-07-14T21:30:00.000Z
-last_updated: 2026-07-16T12:00:00.000Z
+last_updated: 2026-07-16T15:00:00.000Z
 project: AuthService
 project_key: NOKEY
 tracking_system: file-system
-story_location: "{project-root}/_bmad-output/implementation-artifacts"
+story_location: '{project-root}/_bmad-output/implementation-artifacts'
 
 development_status:
   # Epic 1: Foundation & Types
@@ -93,16 +93,16 @@ development_status:
   epic-4-retrospective: done
 
   # Epic 5: Token Refresh Flow
-  epic-5: backlog
-  5-1-authservice-refresh-logic: backlog
-  5-2-auth-controller-refresh-endpoint: backlog
-  epic-5-retrospective: optional
+  epic-5: done
+  5-1-authservice-refresh-logic: done
+  5-2-auth-controller-refresh-endpoint: done
+  epic-5-retrospective: done
 
   # Epic 6: Logout Flow
-  epic-6: backlog
-  6-1-authservice-logout-logic: backlog
-  6-2-auth-controller-logout-endpoint: backlog
-  epic-6-retrospective: optional
+  epic-6: done
+  6-1-authservice-logout-logic: done
+  6-2-auth-controller-logout-endpoint: done
+  epic-6-retrospective: done
 
   # Epic 7: Auth Guard & Protected Routes
   epic-7: backlog
@@ -131,55 +131,55 @@ development_status:
 
 action_items:
   - id: retro-1-1
-    description: "Consider batching small foundation stories in future epics"
+    description: 'Consider batching small foundation stories in future epics'
     owner: Amelia (Dev)
     priority: low
     status: open
     epic: 1
   - id: retro-1-2
-    description: "Add integration test coverage in Epic 9 for all Epic 1 components"
+    description: 'Add integration test coverage in Epic 9 for all Epic 1 components'
     owner: Dana (QA)
     priority: medium
     status: open
     epic: 1
   - id: retro-2-1
-    description: "Add integration test for real npm run setup:keys flow"
+    description: 'Add integration test for real npm run setup:keys flow'
     owner: Dana (QA)
     priority: medium
     status: open
     epic: 2
   - id: retro-2-2
-    description: "Document key rotation strategy for future epic"
+    description: 'Document key rotation strategy for future epic'
     owner: Charlie (Dev)
     priority: low
     status: open
     epic: 2
   - id: retro-3-1
-    description: "Add unexpected error wrapping as standard controller acceptance criterion in story template"
+    description: 'Add unexpected error wrapping as standard controller acceptance criterion in story template'
     owner: Charlie (Dev)
     priority: medium
     status: open
     epic: 3
   - id: retro-3-2
-    description: "Finalize port interfaces before implementing dependent stories — apply in Epic 4 Story 4-1"
+    description: 'Finalize port interfaces before implementing dependent stories — apply in Epic 4 Story 4-1'
     owner: Amelia (Dev)
     priority: medium
     status: open
     epic: 3
   - id: retro-4-1
-    description: "Add Dev Agent Record completion as story done criterion"
+    description: 'Add Dev Agent Record completion as story done criterion'
     owner: Amelia (Dev)
     priority: medium
     status: open
     epic: 4
   - id: retro-4-2
-    description: "Document token storage contract in ITokenService port interface"
+    description: 'Document token storage contract in ITokenService port interface'
     owner: Charlie (Dev)
     priority: medium
     status: open
     epic: 4
   - id: retro-4-3
-    description: "Add review-to-done transition criteria to story workflow"
+    description: 'Add review-to-done transition criteria to story workflow'
     owner: Prajwal (Project Lead)
     priority: low
     status: open

@@ -7,7 +7,10 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
 import { UserExistsException } from '../../shared/exceptions/validation.exception';
-import { InvalidCredentialsException } from '../../shared/exceptions/authentication.exception';
+import {
+  InvalidCredentialsException,
+  TokenExpiredException,
+} from '../../shared/exceptions/authentication.exception';
 import { UserBlockedException } from '../../shared/exceptions/authorization.exception';
 import { USER_SERVICE } from '../../common/ports/user.token';
 import { TOKEN_SERVICE } from '../../common/ports/token.token';
@@ -46,7 +49,10 @@ export class AuthService implements IAuthService {
 
     const tokens = await this.tokenService.generateTokenPair(user.id);
 
-    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, this.BCRYPT_SALT_ROUNDS);
+    const refreshTokenHash = await bcrypt.hash(
+      tokens.refreshToken,
+      this.BCRYPT_SALT_ROUNDS,
+    );
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + this.REFRESH_TOKEN_EXPIRY_DAYS);
     await this.tokenService.storeToken(user.id, refreshTokenHash, expiresAt);
@@ -64,7 +70,9 @@ export class AuthService implements IAuthService {
       : await this.userService.findByUsername(dto.usernameOrEmail);
 
     if (!user) {
-      this.logger.warn(`Login failed: user not found for ${dto.usernameOrEmail}`);
+      this.logger.warn(
+        `Login failed: user not found for ${dto.usernameOrEmail}`,
+      );
       throw new InvalidCredentialsException();
     }
 
@@ -81,7 +89,10 @@ export class AuthService implements IAuthService {
 
     const tokens = await this.tokenService.generateTokenPair(user.id);
 
-    const refreshTokenHash = await bcrypt.hash(tokens.refreshToken, this.BCRYPT_SALT_ROUNDS);
+    const refreshTokenHash = await bcrypt.hash(
+      tokens.refreshToken,
+      this.BCRYPT_SALT_ROUNDS,
+    );
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + this.REFRESH_TOKEN_EXPIRY_DAYS);
     await this.tokenService.storeToken(user.id, refreshTokenHash, expiresAt);
@@ -93,11 +104,82 @@ export class AuthService implements IAuthService {
     return tokens;
   }
 
-  async refresh(_refreshToken: string): Promise<TokenResponseDto> {
-    throw new Error('Not implemented');
+  async refresh(refreshToken: string): Promise<TokenResponseDto> {
+    this.logger.log('Token refresh attempt');
+
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      throw new InvalidCredentialsException('Invalid refresh token');
+    }
+
+    const tokenRecord =
+      await this.tokenService.findUserByRefreshToken(refreshToken);
+
+    if (!tokenRecord) {
+      this.logger.warn('Refresh failed: token not found or invalid');
+      throw new InvalidCredentialsException('Invalid refresh token');
+    }
+
+    if (new Date(tokenRecord.expiresAt) < new Date()) {
+      this.logger.warn(
+        `Refresh failed: token expired for user ${tokenRecord.userId}`,
+      );
+      throw new TokenExpiredException('Refresh token has expired');
+    }
+
+    const tokens = await this.tokenService.generateTokenPair(
+      tokenRecord.userId,
+    );
+
+    try {
+      const refreshTokenHash = await bcrypt.hash(
+        tokens.refreshToken,
+        this.BCRYPT_SALT_ROUNDS,
+      );
+      const expiresAt = new Date(
+        Date.now() + this.REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+      );
+      await this.tokenService.storeToken(
+        tokenRecord.userId,
+        refreshTokenHash,
+        expiresAt,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Token rotation failed for user ${tokenRecord.userId}: ${(error as Error).message}`,
+      );
+      throw new InvalidCredentialsException('Token refresh failed');
+    }
+
+    this.logger.log(`Token refresh successful for user: ${tokenRecord.userId}`);
+
+    return tokens;
   }
 
-  async logout(_userId: string): Promise<void> {
-    throw new Error('Not implemented');
+  async logout(accessToken: string): Promise<void> {
+    try {
+      const { userId } = await this.tokenService.verifyAccessToken(accessToken);
+
+      try {
+        await this.tokenService.deleteRefreshTokenByUserId(userId);
+      } catch (dbError) {
+        this.logger.error(
+          `DB logout failed for user ${userId}: ${(dbError as Error).message}`,
+        );
+      }
+
+      await this.tokenService
+        .blacklistToken(accessToken, userId)
+        .catch((err) => {
+          this.logger.warn(
+            `Redis blacklist failed (best-effort): ${err.message}`,
+          );
+        });
+
+      this.logger.log(`Logout successful for user: ${userId}`);
+    } catch (error) {
+      this.logger.warn(
+        `Logout completed (token may be invalid/expired): ${(error as Error).message}`,
+      );
+    }
   }
 }
