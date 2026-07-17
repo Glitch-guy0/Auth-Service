@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
 import { IUserService } from '../../common/ports/user.port';
 import { RegisterDto } from '../auth/dto/register.dto';
+import { DemographicsService } from '../logging/demographics.service';
 
 @Injectable()
 export class UserService implements IUserService {
@@ -14,6 +15,7 @@ export class UserService implements IUserService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @Optional() private readonly demographicsService: DemographicsService,
   ) {}
 
   async findByEmail(email: string): Promise<User | null> {
@@ -38,10 +40,10 @@ export class UserService implements IUserService {
   }
 
   async logDemographics(
-    _userId: string,
-    _ip: string,
-    _location?: { country: string; city: string },
+    userId: string,
+    ip: string,
+    location?: { country: string; city: string },
   ): Promise<void> {
-    throw new Error('Not implemented');
+    await this.demographicsService.logDemographics(userId, ip, location);
   }
 }

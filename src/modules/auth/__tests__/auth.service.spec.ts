@@ -82,6 +82,10 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
+    beforeEach(() => {
+      userService.logDemographics.mockResolvedValue(undefined);
+    });
+
     it('should register a user and return tokens', async () => {
       userService.findByUsername.mockResolvedValue(null);
       userService.findByEmail.mockResolvedValue(null);

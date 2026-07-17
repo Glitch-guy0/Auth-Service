@@ -4,27 +4,20 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { getValidatedEnv } from '@config/env.validator';
 import { setAppContext } from '@config/app-context';
+import { LogManagerService } from '@shared/logging/log-manager';
 import { AllExceptionsFilter } from '@shared/exceptions/all-exceptions.filter';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const env = getValidatedEnv();
 
+  const app = await NestFactory.create(AppModule);
+
+  const logManager = app.get(LogManagerService);
   setAppContext({
-    logManager: {
-      info: (msg: string, ...args: unknown[]) =>
-        console.log(`[INFO] ${msg}`, ...args),
-      warn: (msg: string, ...args: unknown[]) =>
-        console.warn(`[WARN] ${msg}`, ...args),
-      error: (msg: string, ...args: unknown[]) =>
-        console.error(`[ERROR] ${msg}`, ...args),
-      debug: (msg: string, ...args: unknown[]) =>
-        console.debug(`[DEBUG] ${msg}`, ...args),
-    },
+    logManager,
     config: env as unknown as Record<string, unknown>,
   });
-
-  const app = await NestFactory.create(AppModule);
 
   app.use(cookieParser());
 

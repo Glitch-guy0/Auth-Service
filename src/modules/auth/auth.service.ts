@@ -26,7 +26,7 @@ export class AuthService implements IAuthService {
     @Inject(TOKEN_SERVICE) private readonly tokenService: ITokenService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<TokenResponseDto> {
+  async register(dto: RegisterDto, ip?: string): Promise<TokenResponseDto> {
     this.logger.log(`Registration attempt for username: ${dto.username}`);
 
     const [existingUsername, existingEmail] = await Promise.all([
@@ -57,12 +57,14 @@ export class AuthService implements IAuthService {
     expiresAt.setDate(expiresAt.getDate() + this.REFRESH_TOKEN_EXPIRY_DAYS);
     await this.tokenService.storeToken(user.id, refreshTokenHash, expiresAt);
 
+    this.userService.logDemographics(user.id, ip ?? '').catch(() => {});
+
     this.logger.log(`Registration complete for user: ${user.id}`);
 
     return tokens;
   }
 
-  async login(dto: LoginDto): Promise<TokenResponseDto> {
+  async login(dto: LoginDto, ip?: string): Promise<TokenResponseDto> {
     this.logger.log(`Login attempt for: ${dto.usernameOrEmail}`);
 
     const user = dto.usernameOrEmail.includes('@')
@@ -97,7 +99,7 @@ export class AuthService implements IAuthService {
     expiresAt.setDate(expiresAt.getDate() + this.REFRESH_TOKEN_EXPIRY_DAYS);
     await this.tokenService.storeToken(user.id, refreshTokenHash, expiresAt);
 
-    this.userService.logDemographics(user.id, '').catch(() => {});
+    this.userService.logDemographics(user.id, ip ?? '').catch(() => {});
 
     this.logger.log(`Login successful for user: ${user.id}`);
 

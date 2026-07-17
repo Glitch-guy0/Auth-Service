@@ -4,10 +4,12 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UserService } from '../user.service';
 import { User } from '../user.entity';
+import { DemographicsService } from '../../logging/demographics.service';
 
 describe('UserService', () => {
   let service: UserService;
   let userRepository: jest.Mocked<Repository<User>>;
+  let demographicsService: jest.Mocked<DemographicsService>;
 
   const mockUser: User = {
     id: '550e8400-e29b-41d4-a716-446655440000',
@@ -27,10 +29,15 @@ describe('UserService', () => {
       save: jest.fn(),
     } as unknown as jest.Mocked<Repository<User>>;
 
+    demographicsService = {
+      logDemographics: jest.fn(),
+    } as unknown as jest.Mocked<DemographicsService>;
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,
         { provide: getRepositoryToken(User), useValue: userRepository },
+        { provide: DemographicsService, useValue: demographicsService },
       ],
     }).compile();
 
@@ -106,7 +113,8 @@ describe('UserService', () => {
           email: dto.email,
         }),
       );
-      const savedPassword = userRepository.create.mock.calls[0][0].password as string;
+      const savedPassword = userRepository.create.mock.calls[0][0]
+        .password as string;
       expect(savedPassword).not.toBe(dto.password);
       const isValid = await bcrypt.compare(dto.password, savedPassword);
       expect(isValid).toBe(true);
@@ -145,10 +153,31 @@ describe('UserService', () => {
   });
 
   describe('logDemographics', () => {
-    it('should throw "Not implemented"', async () => {
-      await expect(
-        service.logDemographics('user-id', '127.0.0.1'),
-      ).rejects.toThrow('Not implemented');
+    it('should delegate to DemographicsService with correct arguments', async () => {
+      demographicsService.logDemographics.mockResolvedValue(undefined);
+
+      await service.logDemographics('user-id', '127.0.0.1', {
+        country: 'US',
+        city: 'NYC',
+      });
+
+      expect(demographicsService.logDemographics).toHaveBeenCalledWith(
+        'user-id',
+        '127.0.0.1',
+        { country: 'US', city: 'NYC' },
+      );
+    });
+
+    it('should pass location as undefined when not provided', async () => {
+      demographicsService.logDemographics.mockResolvedValue(undefined);
+
+      await service.logDemographics('user-id', '10.0.0.1');
+
+      expect(demographicsService.logDemographics).toHaveBeenCalledWith(
+        'user-id',
+        '10.0.0.1',
+        undefined,
+      );
     });
   });
 });

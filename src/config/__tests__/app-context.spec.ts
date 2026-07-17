@@ -1,4 +1,9 @@
-import { getAppContext, setAppContext, resetAppContext, AppContext } from '../app-context';
+import {
+  getAppContext,
+  setAppContext,
+  resetAppContext,
+  AppContext,
+} from '../app-context';
 
 function createMockContext(): AppContext {
   return {
@@ -7,6 +12,7 @@ function createMockContext(): AppContext {
       warn: jest.fn(),
       error: jest.fn(),
       debug: jest.fn(),
+      fatal: jest.fn(),
     },
     config: { env: 'test' },
   };

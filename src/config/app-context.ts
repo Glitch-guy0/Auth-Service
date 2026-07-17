@@ -3,6 +3,7 @@ export interface LogManager {
   warn(message: string, ...args: unknown[]): void;
   error(message: string, ...args: unknown[]): void;
   debug(message: string, ...args: unknown[]): void;
+  fatal(message: string, ...args: unknown[]): void;
 }
 
 export interface AppContext {
@@ -21,7 +22,9 @@ export function getAppContext(): AppContext {
 
 export function setAppContext(ctx: AppContext): void {
   if (instance && process.env.NODE_ENV === 'production') {
-    throw new Error('AppContext already initialized. Cannot call setAppContext() twice in production.');
+    throw new Error(
+      'AppContext already initialized. Cannot call setAppContext() twice in production.',
+    );
   }
   instance = ctx;
 }

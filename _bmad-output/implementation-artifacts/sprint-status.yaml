@@ -41,7 +41,7 @@
 # - Retrospective appends its action items to action_items; sprint-status surfaces open ones
 
 generated: 2026-07-14T21:30:00.000Z
-last_updated: 2026-07-16T16:00:00.000Z
+last_updated: 2026-07-17T00:00:00.000Z
 project: AuthService
 project_key: NOKEY
 tracking_system: file-system
@@ -113,12 +113,12 @@ development_status:
   epic-7-retrospective: done
 
   # Epic 8: Logging & Observability
-  epic-8: backlog
-  8-1-logging-module: backlog
-  8-2-pino-logger-provider: backlog
-  8-3-request-logging-interceptor: backlog
-  8-4-demographics-collection: backlog
-  epic-8-retrospective: optional
+  epic-8: done
+  8-1-logging-module: done
+  8-2-pino-logger-provider: done
+  8-3-request-logging-interceptor: done
+  8-4-demographics-collection: done
+  epic-8-retrospective: done
 
   # Epic 9: Testing & Documentation
   epic-9: backlog

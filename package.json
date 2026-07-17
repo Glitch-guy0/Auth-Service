@@ -89,7 +89,7 @@
       "^@database/(.*)$": "<rootDir>/database/$1"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!jose)"
+      "node_modules/(?!jose|uuid)"
     ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"

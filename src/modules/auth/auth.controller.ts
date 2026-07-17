@@ -52,8 +52,12 @@ export class AuthController {
   @ApiResponse({ status: 409, description: 'User already exists' })
   async register(
     @Body(new ZodValidationPipe(RegisterSchema)) dto: RegisterDto,
+    @Req() req: Request,
   ): Promise<TokenResponseDto> {
-    return await this.authService.register(dto);
+    const ip = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '')
+      .split(',')[0]
+      .trim();
+    return await this.authService.register(dto, ip);
   }
 
   @Version('v1')
@@ -69,8 +73,12 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'User blocked' })
   async login(
     @Body(new ZodValidationPipe(LoginSchema)) dto: LoginDto,
+    @Req() req: Request,
   ): Promise<TokenResponseDto> {
-    return await this.authService.login(dto);
+    const ip = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '')
+      .split(',')[0]
+      .trim();
+    return await this.authService.login(dto, ip);
   }
 
   @Version('v1')
