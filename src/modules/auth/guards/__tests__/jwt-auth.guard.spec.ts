@@ -110,6 +110,7 @@ describe('JwtAuthGuard', () => {
       );
 
       await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
+      await expect(guard.canActivate(mockContext)).rejects.toThrow('Invalid or expired token');
     });
 
     it('should throw UnauthorizedException when token is expired', async () => {
@@ -119,6 +120,7 @@ describe('JwtAuthGuard', () => {
       );
 
       await expect(guard.canActivate(mockContext)).rejects.toThrow(UnauthorizedException);
+      await expect(guard.canActivate(mockContext)).rejects.toThrow('Invalid or expired token');
     });
 
     it('should throw UnauthorizedException for unexpected verification errors', async () => {

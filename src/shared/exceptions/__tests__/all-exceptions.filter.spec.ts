@@ -1,7 +1,7 @@
 import { ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { AllExceptionsFilter } from '../all-exceptions.filter';
 import { BaseAuthException } from '../base.exception';
-import { InvalidCredentialsException } from '../authentication.exception';
+import { InvalidCredentialsException, TokenExpiredException } from '../authentication.exception';
 import { UserBlockedException } from '../authorization.exception';
 import { UserExistsException } from '../validation.exception';
 
@@ -75,6 +75,23 @@ describe('AllExceptionsFilter', () => {
         error: {
           code: 'AUTH_USER_BLOCKED',
           message: 'User account has been blocked',
+          timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
+          path: '/auth/v1/authenticate',
+        },
+      });
+    });
+
+    it('should catch TokenExpiredException with 401 status and TOKEN_EXPIRED code', () => {
+      const exception = new TokenExpiredException('Token has expired');
+
+      filter.catch(exception, mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(401);
+      expect(mockResponse.json).toHaveBeenCalledWith({
+        success: false,
+        error: {
+          code: 'TOKEN_EXPIRED',
+          message: 'Token has expired',
           timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/),
           path: '/auth/v1/authenticate',
         },
@@ -195,6 +212,36 @@ describe('AllExceptionsFilter', () => {
           error: expect.objectContaining({
             code: 400,
             message: 'email must be an email,password is too short',
+          }),
+        }),
+      );
+    });
+
+    it('should propagate errors array from HttpException (Zod-style validation)', () => {
+      const exception = new HttpException(
+        {
+          message: 'Validation failed',
+          errors: [
+            { path: ['email'], message: 'Invalid email', code: 'invalid_type' },
+            { path: ['password'], message: 'Too short', code: 'too_short' },
+          ],
+          statusCode: 422,
+        },
+        HttpStatus.UNPROCESSABLE_ENTITY,
+      );
+
+      filter.catch(exception, mockHost);
+
+      expect(mockResponse.status).toHaveBeenCalledWith(422);
+      expect(mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: 422,
+            message: 'Validation failed',
+            errors: [
+              { path: ['email'], message: 'Invalid email', code: 'invalid_type' },
+              { path: ['password'], message: 'Too short', code: 'too_short' },
+            ],
           }),
         }),
       );

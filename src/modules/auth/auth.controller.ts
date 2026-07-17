@@ -53,11 +53,14 @@ export class AuthController {
   async register(
     @Body(new ZodValidationPipe(RegisterSchema)) dto: RegisterDto,
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponseDto> {
     const ip = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '')
       .split(',')[0]
       .trim();
-    return await this.authService.register(dto, ip);
+    const tokens = await this.authService.register(dto, ip);
+    res.cookie('refreshToken', tokens.refreshToken, this.REFRESH_TOKEN_COOKIE_OPTIONS);
+    return tokens;
   }
 
   @Version('v1')
@@ -74,11 +77,14 @@ export class AuthController {
   async login(
     @Body(new ZodValidationPipe(LoginSchema)) dto: LoginDto,
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<TokenResponseDto> {
     const ip = (req.ip ?? (req.headers['x-forwarded-for'] as string) ?? '')
       .split(',')[0]
       .trim();
-    return await this.authService.login(dto, ip);
+    const tokens = await this.authService.login(dto, ip);
+    res.cookie('refreshToken', tokens.refreshToken, this.REFRESH_TOKEN_COOKIE_OPTIONS);
+    return tokens;
   }
 
   @Version('v1')
@@ -118,7 +124,7 @@ export class AuthController {
   async logout(
     @Headers('authorization') authHeader: string,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<{ success: true; data: null }> {
+  ): Promise<null> {
     if (!authHeader?.startsWith('Bearer ')) {
       throw new AuthenticationException(
         'Missing or invalid Authorization header',
@@ -130,6 +136,6 @@ export class AuthController {
 
     res.clearCookie('refreshToken', { path: '/auth' });
 
-    return { success: true, data: null };
+    return null;
   }
 }

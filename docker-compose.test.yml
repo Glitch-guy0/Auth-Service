@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  app:
+    environment:
+      DATABASE_URL: postgresql://authuser:authpass@postgres:5432/authservice_test
+      MONGODB_URL: mongodb://mongodb:27017/authservice_test
+      REDIS_URL: redis://redis:6379/1
+      BCRYPT_COST: 4
+      NODE_ENV: test
+      LOG_LEVEL: warn
+    command: npm run test:e2e
+
+  postgres:
+    environment:
+      POSTGRES_DB: authservice_test

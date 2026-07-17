@@ -15,6 +15,18 @@ interface GuardRequest extends AuthenticatedRequest {
   user?: { userId: string };
 }
 
+/**
+ * NestJS guard that validates the bearer access token on protected routes.
+ *
+ * Reads the access token set by `AuthMiddleware` on the request, verifies it
+ * via {@link ITokenService.verifyAccessToken}, checks the Redis blacklist,
+ * and enriches the request with the authenticated user's ID.
+ *
+ * Implements fail-open semantics for Redis blacklist checks — if Redis is
+ * unreachable, the check is skipped rather than rejecting the request.
+ *
+ * @implements {CanActivate}
+ */
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   private readonly logger = new Logger(JwtAuthGuard.name);
@@ -24,6 +36,17 @@ export class JwtAuthGuard implements CanActivate {
     private readonly redisService: RedisService,
   ) {}
 
+  /**
+   * Validate the incoming request by checking the bearer access token.
+   *
+   * Extracts the token from the request (set by AuthMiddleware), verifies
+   * it via TokenService, checks the Redis blacklist, and enriches the request
+   * with the authenticated user's ID.
+   *
+   * @param context - NestJS execution context providing the HTTP request
+   * @returns Promise resolving to true if the token is valid and not revoked
+   * @throws {UnauthorizedException} If token is missing, invalid, expired, or revoked
+   */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<GuardRequest>();
     const token = request.accessToken;

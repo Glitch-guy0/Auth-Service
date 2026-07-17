@@ -121,13 +121,13 @@ development_status:
   epic-8-retrospective: done
 
   # Epic 9: Testing & Documentation
-  epic-9: backlog
-  9-1-unit-tests-services: backlog
-  9-2-unit-tests-guards-filters: backlog
-  9-3-integration-tests: backlog
-  9-4-documentation: backlog
-  9-5-docker-configuration: backlog
-  epic-9-retrospective: optional
+  epic-9: done
+  9-1-unit-tests-services: done
+  9-2-unit-tests-guards-filters: done
+  9-3-integration-tests: done
+  9-4-documentation: done
+  9-5-docker-configuration: done
+  epic-9-retrospective: done
 
 action_items:
   - id: retro-1-1
@@ -181,6 +181,31 @@ action_items:
   - id: retro-4-3
     description: 'Add review-to-done transition criteria to story workflow'
     owner: Prajwal (Project Lead)
+    priority: low
+    status: open
+  - id: retro-9-1
+    description: 'Enforce Dev Agent Record completion as story done criterion (continuation of retro-4-1)'
+    owner: Amelia (Dev)
+    priority: high
+    status: open
+  - id: retro-9-2
+    description: 'Document URI versioning pattern (prefix: empty string) in architecture doc'
+    owner: Charlie (Dev)
+    priority: medium
+    status: open
+  - id: retro-9-3
+    description: 'Add TransformResponseInterceptor to architecture doc'
+    owner: Charlie (Dev)
+    priority: medium
+    status: open
+  - id: retro-9-4
+    description: 'Document Docker troubleshooting (stale volumes, ESM issue) in README'
+    owner: Dana (QA)
+    priority: low
+    status: open
+  - id: retro-9-5
+    description: 'Make generateTokenPair implementation official - update story spec and architecture'
+    owner: Amelia (Dev)
     priority: low
     status: open
     epic: 4

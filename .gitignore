@@ -3,3 +3,4 @@ node_modules
 !.env.example
 dist/
 user-notes.md
+coverage/

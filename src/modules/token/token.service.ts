@@ -22,6 +22,16 @@ interface RefreshTokenResult {
   tokenHash: string;
 }
 
+/**
+ * Token management service handling JWT creation, verification, storage,
+ * and revocation.
+ *
+ * Uses RSA-256 signing via `jose`, bcrypt for refresh token hashing,
+ * and Redis for token blacklisting. Each instance uses its own RSA key pair
+ * managed by {@link IKeyManager}.
+ *
+ * @implements {ITokenService}
+ */
 @Injectable()
 export class TokenService implements ITokenService {
   private readonly logger = new Logger(TokenService.name);
@@ -35,11 +45,26 @@ export class TokenService implements ITokenService {
     private readonly redisService: RedisService,
   ) {}
 
-  async generateTokenPair(_userId: string): Promise<TokenResponseDto> {
-    void _userId;
-    throw new Error('Not implemented');
+  async generateTokenPair(userId: string): Promise<TokenResponseDto> {
+    const accessToken = await this.generateAccessToken(userId);
+    const { rawToken } = await this.generateRefreshToken();
+    const expiresIn = this.configService.get<number>(
+      'ACCESS_TOKEN_EXPIRY_SECONDS',
+      900,
+    );
+    return { accessToken, refreshToken: rawToken, expiresIn };
   }
 
+  /**
+   * Store or update a refresh token hash for a user.
+   *
+   * Uses an upsert (INSERT ... ON CONFLICT DO UPDATE) pattern so that
+   * each user has exactly one active refresh token at a time.
+   *
+   * @param userId - The user's UUID
+   * @param tokenHash - Bcrypt hash of the raw refresh token
+   * @param expiresAt - Expiration timestamp of the refresh token
+   */
   async storeToken(
     userId: string,
     tokenHash: string,
@@ -59,6 +84,18 @@ export class TokenService implements ITokenService {
     this.logger.debug(`Token stored for user ${userId}`);
   }
 
+  /**
+   * Verify an RSA-signed access token and extract the user ID.
+   *
+   * Parses the JWT header to extract the `kid`, retrieves the corresponding
+   * public key from {@link IKeyManager}, imports it as SPKI, and verifies
+   * the signature and claims via `jose.jwtVerify`.
+   *
+   * @param token - The raw JWT access token string
+   * @returns Object containing the authenticated user's UUID
+   * @throws {TokenInvalidSignatureException} If the token is malformed, the kid is missing, or the signature is invalid
+   * @throws {TokenExpiredException} If the token's exp claim has passed
+   */
   async verifyAccessToken(token: string): Promise<{ userId: string }> {
     try {
       const parts = token.split('.');
@@ -116,6 +153,16 @@ export class TokenService implements ITokenService {
     }
   }
 
+  /**
+   * Find the user associated with a raw refresh token.
+   *
+   * Performs a linear scan over all stored token hashes using bcrypt.compare.
+   * This is O(n) per lookup — acceptable for moderate user counts but may
+   * need optimization at scale.
+   *
+   * @param rawToken - The plain-text refresh token to match
+   * @returns The user ID and token expiration, or null if no match found
+   */
   async findUserByRefreshToken(
     rawToken: string,
   ): Promise<{ userId: string; expiresAt: Date } | null> {
@@ -178,6 +225,14 @@ export class TokenService implements ITokenService {
     }
   }
 
+  /**
+   * Delete the refresh token record for a given user.
+   *
+   * Executes a DELETE query against the `auth_tokens` table. Used during
+   * logout to invalidate the user's refresh token.
+   *
+   * @param userId - The user's UUID whose token should be deleted
+   */
   async deleteRefreshTokenByUserId(userId: string): Promise<void> {
     await this.authTokenRepository.query(
       'DELETE FROM auth_tokens WHERE user_id = $1',
@@ -186,6 +241,16 @@ export class TokenService implements ITokenService {
     this.logger.debug(`Refresh token deleted for user ${userId}`);
   }
 
+  /**
+   * Blacklist an access token in Redis to revoke it before expiry.
+   *
+   * Parses the JWT payload to compute the remaining TTL, then stores
+   * a `blacklist:{token}` key in Redis with that TTL. This is a best-effort
+   * operation — Redis failures are caught and logged without propagating.
+   *
+   * @param token - The raw JWT access token to blacklist
+   * @param userId - The user's UUID (stored as metadata in Redis)
+   */
   async blacklistToken(token: string, userId: string): Promise<void> {
     try {
       const parts = token.split('.');

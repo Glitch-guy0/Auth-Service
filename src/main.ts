@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { getValidatedEnv } from '@config/env.validator';
@@ -12,6 +12,8 @@ async function bootstrap() {
   const env = getValidatedEnv();
 
   const app = await NestFactory.create(AppModule);
+
+  app.enableVersioning({ type: VersioningType.URI, prefix: '' });
 
   const logManager = app.get(LogManagerService);
   setAppContext({

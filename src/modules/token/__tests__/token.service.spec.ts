@@ -98,11 +98,21 @@ describe('TokenService', () => {
     service = module.get<TokenService>(TokenService);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('generateAccessToken (via generateTokenPair path)', () => {
-    it('should throw "Not implemented" for generateTokenPair', async () => {
-      await expect(service.generateTokenPair('user-1')).rejects.toThrow(
-        'Not implemented',
+    it('should return an access token and refresh token via generateTokenPair', async () => {
+      (crypto.randomBytes as jest.Mock).mockReturnValue(
+        Buffer.from('a'.repeat(64)),
       );
+      (bcrypt.hash as jest.Mock).mockResolvedValue('$2b$10$hashedvalue');
+
+      const result = await service.generateTokenPair('user-1');
+      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('refreshToken');
+      expect(result).toHaveProperty('expiresIn');
     });
 
     it('should throw error when getPrivateKey fails', async () => {

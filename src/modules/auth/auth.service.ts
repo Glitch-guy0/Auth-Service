@@ -15,6 +15,16 @@ import { UserBlockedException } from '../../shared/exceptions/authorization.exce
 import { USER_SERVICE } from '../../common/ports/user.token';
 import { TOKEN_SERVICE } from '../../common/ports/token.token';
 
+/**
+ * Core authentication service orchestrating user registration, login,
+ * token refresh, and logout use cases.
+ *
+ * Delegates user persistence to {@link IUserService} and token operations
+ * to {@link ITokenService}. Follows hexagonal architecture — depends only
+ * on port interfaces, not concrete implementations.
+ *
+ * @implements {IAuthService}
+ */
 @Injectable()
 export class AuthService implements IAuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -26,6 +36,28 @@ export class AuthService implements IAuthService {
     @Inject(TOKEN_SERVICE) private readonly tokenService: ITokenService,
   ) {}
 
+  /**
+   * Register a new user account.
+   *
+   * Validates username and email uniqueness, hashes the password with bcrypt,
+   * creates the user record, generates a token pair, stores the refresh token
+   * hash, and fires a best-effort demographics log.
+   *
+   * @param dto - Registration data (username, email, password)
+   * @param ip - Client IP address for demographics logging (optional)
+   * @returns Promise resolving to token pair (accessToken, refreshToken, expiresIn)
+   * @throws {UserExistsException} If username or email already exists
+   *
+   * @example
+   * ```typescript
+   * const tokens = await authService.register({
+   *   username: 'alice',
+   *   email: 'alice@example.com',
+   *   password: 'securepass123',
+   * });
+   * // { accessToken: 'eyJ...', refreshToken: '...', expiresIn: 86400 }
+   * ```
+   */
   async register(dto: RegisterDto, ip?: string): Promise<TokenResponseDto> {
     this.logger.log(`Registration attempt for username: ${dto.username}`);
 
@@ -64,6 +96,28 @@ export class AuthService implements IAuthService {
     return tokens;
   }
 
+  /**
+   * Authenticate a user by username or email and password.
+   *
+   * Looks up the user by email (if the input contains '@') or username,
+   * verifies the password with bcrypt, checks for blocked accounts,
+   * and rotates the token pair on success.
+   *
+   * @param dto - Login credentials (usernameOrEmail, password)
+   * @param ip - Client IP address for demographics logging (optional)
+   * @returns Promise resolving to token pair (accessToken, refreshToken, expiresIn)
+   * @throws {InvalidCredentialsException} If user not found or password is wrong
+   * @throws {UserBlockedException} If the user account is blocked
+   *
+   * @example
+   * ```typescript
+   * const tokens = await authService.login({
+   *   usernameOrEmail: 'alice',
+   *   password: 'securepass123',
+   * });
+   * // { accessToken: 'eyJ...', refreshToken: '...', expiresIn: 86400 }
+   * ```
+   */
   async login(dto: LoginDto, ip?: string): Promise<TokenResponseDto> {
     this.logger.log(`Login attempt for: ${dto.usernameOrEmail}`);
 
@@ -106,6 +160,18 @@ export class AuthService implements IAuthService {
     return tokens;
   }
 
+  /**
+   * Refresh an access token using a valid refresh token.
+   *
+   * Looks up the refresh token hash in the database via a linear bcrypt
+   * comparison scan, checks expiry, then rotates the token pair (generates
+   * new access + refresh tokens, stores the new hash).
+   *
+   * @param refreshToken - The raw refresh token from the cookie
+   * @returns Promise resolving to a new token pair (accessToken, refreshToken, expiresIn)
+   * @throws {InvalidCredentialsException} If the token is invalid or rotation fails
+   * @throws {TokenExpiredException} If the refresh token has expired
+   */
   async refresh(refreshToken: string): Promise<TokenResponseDto> {
     this.logger.log('Token refresh attempt');
 
@@ -157,6 +223,16 @@ export class AuthService implements IAuthService {
     return tokens;
   }
 
+  /**
+   * Log out a user by invalidating their session.
+   *
+   * Verifies the access token to extract the user ID, deletes the refresh
+   * token from the database, and adds the access token to the Redis blacklist
+   * (best-effort — Redis failures are silently caught). The outer try/catch
+   * ensures the logout completes even if the token is invalid or expired.
+   *
+   * @param accessToken - The JWT access token from the Authorization header
+   */
   async logout(accessToken: string): Promise<void> {
     try {
       const { userId } = await this.tokenService.verifyAccessToken(accessToken);

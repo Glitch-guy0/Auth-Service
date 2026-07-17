@@ -23,6 +23,7 @@ describe('AuthController', () => {
   };
 
   const mockRequest = { ip: '192.168.1.1', headers: {} } as any;
+  const mockResponse = { cookie: jest.fn() } as any;
 
   const validDto: RegisterDto = {
     username: 'testuser',
@@ -63,7 +64,7 @@ describe('AuthController', () => {
 
   describe('register', () => {
     it('should return 201 with tokens on valid registration', async () => {
-      const result = await controller.register(validDto, mockRequest);
+      const result = await controller.register(validDto, mockRequest, mockResponse);
 
       expect(result).toEqual(mockTokens);
       expect(authService.register).toHaveBeenCalledWith(
@@ -73,7 +74,7 @@ describe('AuthController', () => {
     });
 
     it('should return TokenResponseDto from AuthService.register', async () => {
-      const result = await controller.register(validDto, mockRequest);
+      const result = await controller.register(validDto, mockRequest, mockResponse);
 
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
@@ -85,7 +86,7 @@ describe('AuthController', () => {
         new UserExistsException('User already exists with this username'),
       );
 
-      await expect(controller.register(validDto, mockRequest)).rejects.toThrow(
+      await expect(controller.register(validDto, mockRequest, mockResponse)).rejects.toThrow(
         UserExistsException,
       );
     });
@@ -94,7 +95,7 @@ describe('AuthController', () => {
       const error = new Error('Unexpected error');
       authService.register.mockRejectedValue(error);
 
-      await expect(controller.register(validDto, mockRequest)).rejects.toThrow(
+      await expect(controller.register(validDto, mockRequest, mockResponse)).rejects.toThrow(
         Error,
       );
     });
@@ -120,14 +121,14 @@ describe('AuthController', () => {
 
   describe('login', () => {
     it('should return 200 with tokens on valid login', async () => {
-      const result = await controller.login(loginDto, mockRequest);
+      const result = await controller.login(loginDto, mockRequest, mockResponse);
 
       expect(result).toEqual(mockTokens);
       expect(authService.login).toHaveBeenCalledWith(loginDto, '192.168.1.1');
     });
 
     it('should return TokenResponseDto from AuthService.login', async () => {
-      const result = await controller.login(loginDto, mockRequest);
+      const result = await controller.login(loginDto, mockRequest, mockResponse);
 
       expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('refreshToken');
@@ -139,7 +140,7 @@ describe('AuthController', () => {
         new InvalidCredentialsException('Invalid email or password'),
       );
 
-      await expect(controller.login(loginDto, mockRequest)).rejects.toThrow(
+      await expect(controller.login(loginDto, mockRequest, mockResponse)).rejects.toThrow(
         InvalidCredentialsException,
       );
     });
@@ -149,7 +150,7 @@ describe('AuthController', () => {
         new UserBlockedException('User account has been blocked'),
       );
 
-      await expect(controller.login(loginDto, mockRequest)).rejects.toThrow(
+      await expect(controller.login(loginDto, mockRequest, mockResponse)).rejects.toThrow(
         UserBlockedException,
       );
     });
@@ -158,7 +159,7 @@ describe('AuthController', () => {
       const error = new Error('Unexpected error');
       authService.login.mockRejectedValue(error);
 
-      await expect(controller.login(loginDto, mockRequest)).rejects.toThrow(
+      await expect(controller.login(loginDto, mockRequest, mockResponse)).rejects.toThrow(
         Error,
       );
     });
@@ -228,7 +229,7 @@ describe('AuthController', () => {
         mockResponse as any,
       );
 
-      expect(result).toEqual({ success: true, data: null });
+      expect(result).toBeNull();
       expect(authService.logout).toHaveBeenCalledWith('valid-token');
     });
 
