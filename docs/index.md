@@ -1,19 +1,7 @@
-# AuthService — Documentation Index
+# AuthService — Documentation Hub
 
-**Generated:** 2026-07-12  
-**Project Type:** Backend Service (NestJS)  
-**Architecture:** Hexagonal (Ports & Adapters)  
-**Status:** Initial Scan Complete
-
----
-
-## Project Overview
-
-- **Type:** Monolith
-- **Primary Language:** TypeScript
-- **Framework:** NestJS 11.x
-- **Architecture Pattern:** Hexagonal (Ports & Adapters)
-- **Database:** PostgreSQL (core) + MongoDB (logging) + Redis (cache)
+**Production-Ready NestJS Authentication Service**
+Hexagonal architecture | 262 tests passing | 9 epics complete
 
 ---
 
@@ -26,128 +14,104 @@
 | Port | 3000 |
 | Node Version | 22.x |
 | TypeScript | 5.8.3 |
+| API Base Path | `/v1/auth/` |
 
 ---
 
-## Generated Documentation
+## Documentation Map
 
-### Core Documentation
-
-- [Project Overview](./project-overview.md) — Executive summary, tech stack, architecture overview
-- [Architecture](../_bmad-output/planning-artifacts/architecture.md) — Full technical architecture (689 lines)
-- [Technical Documentation](../_bmad-output/planning-artifacts/technical-documentation.md) — Implementation guide (726 lines)
-
-### Development Documentation
-
-- [Source Tree Analysis](./source-tree-analysis.md) — Project structure and file inventory
-- [Development Guide](./development-guide.md) — Setup, scripts, workflow, testing
-
-### Planning Artifacts
-
-- [Architecture Document](../_bmad-output/planning-artifacts/architecture.md) — Detailed technical architecture
-- [Technical Documentation](../_bmad-output/planning-artifacts/technical-documentation.md) — API reference, database schema, flows
-- [Auth Service Plan](../_bmad-output/planning-artifacts/auth-service-plan.md) — Initial plan
-- [Brainstorming Session](../_bmad-output/brainstorming/brainstorm-auth-service-design-2026-07-11/.memlog.md) — Design decisions log
+| Document | Description |
+|----------|-------------|
+| [Project Overview](./project-overview.md) | Executive summary, features, tech stack, phases |
+| [Architecture](./architecture.md) | Hexagonal architecture deep-dive |
+| [API Reference](./api-reference.md) | Endpoint specs, request/response schemas |
+| [Database Schema](./database-schema.md) | PostgreSQL, MongoDB, Redis schemas |
+| [Authentication Flows](./authentication-flows.md) | Registration, login, refresh, logout sequences |
+| [Key Management](./key-management.md) | JWT RSA key lifecycle and rotation |
+| [Deployment](./deployment.md) | Production deployment guide |
+| [Development Guide](./development-guide.md) | Local setup, scripts, workflow |
+| [Retrospective Report](./retrospective-report.md) | Epic completion analysis |
 
 ---
 
-## Existing Documentation
+## Diagrams Index
 
-| Document | Location | Description |
-|----------|----------|-------------|
-| Architecture | `_bmad-output/planning-artifacts/architecture.md` | Complete technical architecture |
-| Technical Docs | `_bmad-output/planning-artifacts/technical-documentation.md` | Implementation guide |
-| Project Context | `_bmad-output/project-context.md` | AI agent rules |
-
----
-
-## Getting Started
-
-### For Developers
-
-1. **Read:** [Development Guide](./development-guide.md) — Setup instructions
-2. **Understand:** [Project Overview](./project-overview.md) — Architecture overview
-3. **Deep Dive:** [Architecture](../_bmad-output/planning-artifacts/architecture.md) — Technical details
-
-### For AI Agents
-
-1. **Start:** [Project Context](../_bmad-output/project-context.md) — Rules and patterns
-2. **Reference:** [Architecture](../_bmad-output/planning-artifacts/architecture.md) — Design decisions
-3. **Implement:** Follow module patterns in [Technical Documentation](../_bmad-output/planning-artifacts/technical-documentation.md)
+| Diagram | File | Description |
+|---------|------|-------------|
+| Registration Flow | [01-sequence-registration.mmd](./diagrams/01-sequence-registration.mmd) | User signup sequence |
+| Login Flow | [02-sequence-login.mmd](./diagrams/02-sequence-login.mmd) | Authentication sequence |
+| Refresh Flow | [03-sequence-refresh.mmd](./diagrams/03-sequence-refresh.mmd) | Token refresh sequence |
+| Logout + Blacklist | [04-sequence-logout.mmd](./diagrams/04-sequence-logout.mmd) | Logout and token revocation |
+| Redis Blacklist | [04-redis-blacklist.mmd](./diagrams/04-redis-blacklist.mmd) | Blacklist data flow |
+| Entity Classes | [05-class-entities.mmd](./diagrams/05-class-entities.mmd) | Domain entity model |
+| Type Interfaces | [06-types-interfaces.mmd](./diagrams/06-types-interfaces.mmd) | Core type definitions |
+| Service Classes | [06-class-services.mmd](./diagrams/06-class-services.mmd) | Service layer classes |
+| Exception Classes | [07-class-exceptions.mmd](./diagrams/07-class-exceptions.mmd) | Error hierarchy |
+| Hexagonal Architecture | [08-component-hexagonal.mmd](./diagrams/08-component-hexagonal.mmd) | Ports and adapters overview |
+| Package Modules Tree | [09-package-modules-tree.mmd](./diagrams/09-package-modules-tree.mmd) | Module dependency tree |
+| Package Modules Flow | [09-package-modules-flowchart.mmd](./diagrams/09-package-modules-flowchart.mmd) | Module interaction flow |
+| Runtime Objects | [10-object-runtime.mmd](./diagrams/10-object-runtime.mmd) | Runtime object graph |
+| Auth Guard Flow | [11-sequence-auth-guard.mmd](./diagrams/11-sequence-auth-guard.mmd) | Guard middleware sequence |
+| Requirements | [requirements.mmd](./diagrams/requirements.mmd) | Functional requirements |
 
 ---
 
 ## Architecture Summary
 
-```
-┌─────────────────────────────────────────────────────┐
-│  INBOUND ADAPTERS                                   │
-│  HTTP Controller │ Auth Guard │ Admin Controller     │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│  PORTS (Interfaces)                                 │
-│  IAuthService │ IUserService │ ITokenService        │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│  CORE DOMAIN                                        │
-│  Auth Use Cases │ User Entity │ Token Service       │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│  OUTBOUND ADAPTERS                                  │
-│  PostgreSQL │ MongoDB │ Redis │ Vault (Future)      │
-└─────────────────────────────────────────────────────┘
-```
+AuthService implements a hexagonal (Ports and Adapters) architecture where the core domain logic is isolated from all external concerns. Inbound adapters (HTTP controllers and auth guards) receive requests and translate them into port operations. The core domain handles authentication use cases -- registration, login, token refresh, and logout -- through defined service interfaces. Outbound adapters persist data to PostgreSQL for core records, MongoDB for audit logging, and Redis for token blacklisting. This separation ensures the domain logic remains testable and decoupled from infrastructure. See [architecture.md](./architecture.md) for the full technical design.
 
 ---
 
-## Implementation Phases
+## Implementation Status
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Phase 1: Core Auth | 🔄 In Progress | Signup, Login, Tokens, Logout |
-| Phase 2: Security | ⏳ Pending | Rate limiting, Password reset, Email verification |
-| Phase 3: Admin | ⏳ Pending | RBAC, Admin endpoints, Analytics |
-| Phase 4: OAuth | ⏳ Future | Consumer, Provider, SSO |
+| Metric | Value |
+|--------|-------|
+| Epics Completed | 9 of 9 |
+| Total Tests | 262 |
+| Unit Tests | 248 |
+| E2E Tests | 14 |
+| Test Suites | 20 |
+| Phase 1 (Core Auth) | COMPLETE |
+
+---
+
+## Technology Stack
+
+| Category | Technology | Version |
+|----------|------------|---------|
+| Framework | NestJS | 11.1.3 |
+| Language | TypeScript | 5.8.3 |
+| Runtime | Node.js | 22.x |
+| Core Database | PostgreSQL | 16+ |
+| Log Database | MongoDB | 7+ |
+| Cache / Blacklist | Redis | 7+ |
+| JWT Signing | jose | — |
+| Password Hashing | bcrypt | — |
+| Logging | pino + chalk | — |
+| Validation | Zod | — |
+| Core ORM | TypeORM | — |
+| Log ORM | Mongoose | — |
+| Cache Client | ioredis | — |
 
 ---
 
 ## Key Files Reference
 
-| File | Purpose | Location |
-|------|---------|----------|
-| `package.json` | Dependencies | Root |
-| `tsconfig.json` | TypeScript config | Root |
-| `.env.example` | Environment template | Root |
-| `nest-cli.json` | CLI config | Root |
-| `src/main.ts` | Entry point | src/ |
-| `src/app.module.ts` | Root module | src/ |
+| File | Purpose |
+|------|---------|
+| `src/main.ts` | Application bootstrap and NestFactory setup |
+| `src/app.module.ts` | Root module, imports all feature modules |
+| `src/modules/auth/` | Registration, login, logout use cases |
+| `src/modules/user/` | User entity and repository |
+| `src/modules/token/` | JWT generation and refresh logic |
+| `src/modules/key/` | RSA key management and rotation |
+| `src/modules/redis/` | Redis blacklist service |
+| `src/modules/logging/` | Structured logging with MongoDB sink |
+| `package.json` | Dependencies and scripts |
+| `tsconfig.json` | TypeScript compiler configuration |
+| `nest-cli.json` | NestJS CLI configuration |
+| `.env.example` | Environment variable template |
 
 ---
 
-## Documentation Quality
-
-| Metric | Value |
-|--------|-------|
-| Files Generated | 4 |
-| Total Lines | ~800 |
-| Coverage | Complete (initial scan) |
-| Last Updated | 2026-07-12 |
-
----
-
-## Next Steps
-
-1. **Review** this index to understand documentation structure
-2. **Deep dive** into architecture for implementation details
-3. **Follow** development guide for setup
-4. **Create PRD** when ready to plan new features
-
----
-
-*Index generated by BMAD Documentation Workflow*
+*Last updated: 2026-07-18*

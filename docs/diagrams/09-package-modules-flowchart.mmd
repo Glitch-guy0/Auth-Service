@@ -1,0 +1,195 @@
+%% Flowchart Diagram - Module Dependencies
+%% Maps to: Section 11.4 Folder Structure, Section 11.5 Internal Library Management
+%% Shows dependency relationships between modules
+%% Token blacklist is Redis-only (not in PostgreSQL schema)
+
+flowchart LR
+    %% Root
+    Main --> AppModule
+
+    %% AppModule to Feature Modules
+    subgraph FeatureModules [Feature Modules]
+        AppModule --> AuthModule
+        AppModule --> UserModule
+        AppModule --> TokenModule
+        AppModule --> LoggingModule
+    end
+
+    %% Feature Module Dependencies
+    AuthModule --> UserModule
+    AuthModule --> TokenModule
+    AuthModule --> LoggingModule
+
+    UserModule --> LoggingModule
+    TokenModule --> LoggingModule
+
+    %% Shared Utilities
+    subgraph SharedUtilities [Shared Utilities]
+        subgraph Decorators [decorators]
+            RetryDecorator
+            CacheDecorator
+            LogDecorator
+        end
+
+        subgraph Filters [filters]
+            HttpExceptionFilter
+            AllExceptionsFilter
+        end
+
+        subgraph Guards [guards]
+            JwtAuthGuard
+            RolesGuard
+        end
+
+        subgraph Interceptors [interceptors]
+            LoggingInterceptor
+            TimeoutInterceptor
+            TransformInterceptor
+        end
+
+        subgraph Pipes [pipes]
+            ValidationPipe
+        end
+
+        subgraph Interfaces [interfaces]
+            IUserService
+            ITokenService
+        end
+
+        subgraph Utils [utils]
+            HashUtil
+            UuidUtil
+        end
+
+        subgraph Tx [transaction]
+            Transaction
+        end
+    end
+
+    %% Feature Modules to Shared Utilities
+    AuthModule --> RetryDecorator
+    AuthModule --> HttpExceptionFilter
+    AuthModule --> JwtAuthGuard
+    AuthModule --> LoggingInterceptor
+    AuthModule --> ValidationPipe
+    AuthModule --> IUserService
+    AuthModule --> Transaction
+
+    UserModule --> RetryDecorator
+    UserModule --> HttpExceptionFilter
+    UserModule --> RolesGuard
+    UserModule --> IUserService
+    UserModule --> HashUtil
+
+    TokenModule --> RetryDecorator
+    TokenModule --> ITokenService
+    TokenModule --> HashUtil
+
+    LoggingModule --> RetryDecorator
+    LoggingModule --> IUserService
+
+    %% Configuration
+    subgraph Configuration [Configuration]
+        subgraph Env [env]
+            EnvValidator
+        end
+
+        subgraph Database [database]
+            DatabaseConfig
+        end
+
+        subgraph Context [context]
+            AppContext
+        end
+    end
+
+    %% Feature Modules to Configuration
+    AuthModule --> EnvValidator
+    AuthModule --> DatabaseConfig
+    AuthModule --> AppContext
+
+    UserModule --> EnvValidator
+    UserModule --> DatabaseConfig
+    UserModule --> AppContext
+
+    TokenModule --> EnvValidator
+    TokenModule --> DatabaseConfig
+    TokenModule --> AppContext
+
+    LoggingModule --> EnvValidator
+    LoggingModule --> AppContext
+
+    %% Database Layer
+    subgraph DatabaseLayer [Database Layer]
+        subgraph Migrations [migrations]
+            TypeOrmMigrations
+        end
+
+        subgraph Seeds [seeds]
+            DatabaseSeeds
+        end
+    end
+
+    %% Configuration to Database Layer
+    DatabaseConfig --> TypeOrmMigrations
+    DatabaseConfig --> DatabaseSeeds
+
+    %% Schema Layer
+    subgraph Schema [Schema]
+        subgraph Entities [entities]
+            UserEntity
+            AuthTokenEntity
+            PublicKeyRegistryEntity
+        end
+
+        subgraph Models [model]
+            DemographicsModel
+            AuditLogModel
+            ActivityModel
+        end
+
+        subgraph CacheSchemas [cache]
+            TokenCache
+            SessionCache
+            RateLimitCache
+        end
+    end
+
+    %% Feature Modules to Schema
+    AuthModule --> UserEntity
+    AuthModule --> AuthTokenEntity
+    AuthModule --> PublicKeyRegistryEntity
+    AuthModule --> TokenCache
+
+    UserModule --> UserEntity
+    UserModule --> DemographicsModel
+    UserModule --> SessionCache
+
+    TokenModule --> AuthTokenEntity
+    TokenModule --> PublicKeyRegistryEntity
+    TokenModule --> TokenCache
+    TokenModule --> SessionCache
+
+    LoggingModule --> AuditLogModel
+    LoggingModule --> ActivityModel
+
+    %% Styling
+    classDef featureModule fill:#4CAF50,color:#fff
+    classDef sharedUtil fill:#2196F3,color:#fff
+    classDef config fill:#FF9800,color:#fff
+    classDef database fill:#9C27B0,color:#fff
+    classDef root fill:#F44336,color:#fff
+    classDef schema fill:#00BCD4,color:#fff
+    classDef sqlEntity fill:#8BC34A,color:#fff
+    classDef nosqlModel fill:#009688,color:#fff
+    classDef cacheSchema fill:#FF5722,color:#fff
+
+    class AuthModule,UserModule,TokenModule,LoggingModule featureModule
+    class RetryDecorator,CacheDecorator,LogDecorator,HttpExceptionFilter,AllExceptionsFilter,JwtAuthGuard,RolesGuard,LoggingInterceptor,TimeoutInterceptor,TransformInterceptor,ValidationPipe,IUserService,ITokenService,HashUtil,UuidUtil,Transaction sharedUtil
+    class EnvValidator,DatabaseConfig,AppContext config
+    class TypeOrmMigrations,DatabaseSeeds database
+    class AppModule,Main root
+    class Schema schema
+    class UserEntity,AuthTokenEntity,PublicKeyRegistryEntity sqlEntity
+    class DemographicsModel,AuditLogModel,ActivityModel nosqlModel
+    class TokenCache,SessionCache,RateLimitCache cacheSchema

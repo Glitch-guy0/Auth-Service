@@ -1,0 +1,136 @@
+%% Class Diagram
+%% Maps to: Hexagonal Architecture, Ports & Adapters
+%% Service implementations, dependencies, and adapter classes
+%% TokenService validates JWT + returns complete payload (not just boolean)
+%% AuthService owns user lookup after token validation
+%% Transaction uses callback pattern: createTransaction(callback) + discard()
+
+classDiagram
+    %% ════════════════════════════════════════════════════════════════
+    %%  ENTITY
+    %% ════════════════════════════════════════════════════════════════
+    class UserEntity {
+        <<Entity>>
+        +id: UUID
+        +username: string
+        +email: string
+        +password: string
+        +blocked: boolean
+        +isDeleted: boolean
+        +isVerified: boolean
+        +createdAt: Date
+        +updatedAt: Date
+    }
+
+    %% ════════════════════════════════════════════════════════════════
+    %%  PORT INTERFACES
+    %% ════════════════════════════════════════════════════════════════
+    class IAuthService {
+        <<Port Interface>>
+        +register(dto: RegisterDto): Promise~TokenResponse~
+        +login(dto: LoginDto): Promise~TokenResponse~
+        +refresh(dto: RefreshTokenDto): Promise~TokenResponse~
+        +logout(accessToken: string): Promise~void~
+    }
+
+    class IUserService {
+        <<Port Interface>>
+        +findByEmail(email: string): Promise~UserEntity~
+        +findByUsername(username: string): Promise~UserEntity~
+        +findById(id: string): Promise~UserEntity~
+        +create(dto: RegisterDto): Promise~UserEntity~
+        +reduce(entity: UserEntity): ReduceBuilder
+    }
+
+    class ITokenService {
+        <<Port Interface>>
+        +generateTokenPair(user: UserEntity): Promise~TokenPair~
+        +validateRefreshToken(token: string): Promise~JwtPayload
+        +blacklistToken(token: string): Promise~void~
+        +isBlacklisted(accessToken: string): Promise~boolean~
+    }
+
+    %% ════════════════════════════════════════════════════════════════
+    %%  SERVICE IMPLEMENTATIONS
+    %% ════════════════════════════════════════════════════════════════
+    class AuthService {
+        -userService: IUserService
+        -tokenService: ITokenService
+        -logger: ILoggerService
+        -transaction: Transaction
+        +register(dto: RegisterDto): Promise~TokenResponse~
+        +login(dto: LoginDto): Promise~TokenResponse~
+        +refresh(dto: RefreshTokenDto): Promise~TokenResponse~
+        +logout(accessToken: string): Promise~void~
+        -hashPassword(password: string): Promise~string~
+        -verifyPassword(password: string, hash: string): Promise~boolean~
+        -lookupUser(payload: JwtPayload): Promise~UserEntity~
+    }
+
+    class UserService {
+        -userRepo: UserRepository
+        +findByEmail(email: string): Promise~UserEntity~
+        +findByUsername(username: string): Promise~UserEntity~
+        +findById(id: string): Promise~UserEntity~
+        +create(dto: RegisterDto): Promise~UserEntity~
+        +reduce(entity: UserEntity): ReduceBuilder
+        +logDemographics(userId: string, ip: string, userAgent: string): Promise~void~
+    }
+
+    class TokenService {
+        -keyManager: KeyManager
+        -tokenRepo: TokenRepository
+        -redis: RedisService
+        +generateTokenPair(user: UserEntity): Promise~TokenPair~
+        +validateRefreshToken(token: string): Promise~JwtPayload
+        +blacklistToken(token: string): Promise~void~
+        +isBlacklisted(accessToken: string): Promise~boolean~
+        -signAccessToken(user: UserEntity): string
+        -hashToken(token: string): string
+    }
+
+    class LoggerService {
+        -logger: PinoLogger
+        +debug(message: string, context?: string): void
+        +info(message: string, context?: string): void
+        +warn(message: string, context?: string): void
+        +error(message: string, context?: string): void
+        +fatal(message: string, context?: string): void
+    }
+
+    class KeyManager {
+        -keys: Map~string, KeyPair~
+        +getPrivateKey(): PrivateKey
+        +getPublicKey(): PublicKey
+        +getCurrentKid(): string
+        -loadKeys(): void
+        -clearPrivateKey(): void
+    }
+
+    class Transaction {
+        <<Pattern>>
+        -connection: PostgreSQL
+        -isActive: boolean
+        +createTransaction(callback: Function): Promise~any~
+        +discard(): void
+    }
+
+    %% ════════════════════════════════════════════════════════════════
+    %%  INTERFACE IMPLEMENTATIONS
+    %% ════════════════════════════════════════════════════════════════
+    IAuthService <|.. AuthService
+    IUserService <|.. UserService
+    ITokenService <|.. TokenService
+
+    %% ════════════════════════════════════════════════════════════════
+    %%  DEPENDENCIES
+    %% ════════════════════════════════════════════════════════════════
+    AuthService --> IUserService : uses
+    AuthService --> ITokenService : uses
+    AuthService --> ILoggerService : logs to
+    AuthService --> Transaction : manages
+
+    UserService --> UserRepository : persists
+    TokenService --> TokenRepository : persists
+    TokenService --> RedisService : caches
+    TokenService --> KeyManager : signs with

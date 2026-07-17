@@ -1,0 +1,96 @@
+%% Token Refresh Sequence
+%% Maps to: FR-3, FR-6, FR-7
+%% AuthService owns user lookup; TokenService validates JWT + returns complete payload
+%% Flow: verify signature → extract user_id → get hash by user_id → bcrypt compare
+
+sequenceDiagram
+    participant Client
+    participant AuthController
+    participant AuthService
+    participant TokenService
+    participant KeyManager
+    participant UserService
+    participant PostgreSQL
+
+    Client->>AuthController: POST /auth/v1/refresh
+    AuthController->>AuthController: Extract refresh token from httpOnly cookie
+    AuthController->>AuthController: Parse & Validate (RefreshTokenSchema.parse)
+
+    AuthController->>AuthService: refresh(refreshToken)
+
+    AuthService->>TokenService: validateRefreshToken(refreshToken)
+
+    rect rgb(230, 245, 255)
+        Note over TokenService,PostgreSQL: Step 1: Verify JWT signature
+        TokenService->>TokenService: Decode JWT header to extract kid
+        TokenService->>KeyManager: getPublicKey(kid)
+        KeyManager-->>TokenService: PublicKey
+        TokenService->>TokenService: Verify JWT signature (RSA)
+        Note right of TokenService: jwt.verify(refreshToken, publicKey)
+    end
+
+    alt Invalid JWT signature
+        TokenService-->>AuthService: TokenInvalidSignatureException
+        AuthService-->>AuthController: TokenInvalidSignatureException
+        AuthController-->>Client: 401 Unauthorized
+    end
+
+    rect rgb(255, 245, 230)
+        Note over TokenService,PostgreSQL: Step 2: Extract user_id, fetch hash, bcrypt compare
+        TokenService->>TokenService: Extract user_id from verified payload
+        TokenService->>PostgreSQL: SELECT token_hash FROM auth_tokens WHERE user_id = ?
+        PostgreSQL-->>TokenService: {token_hash, expires_at}
+
+        alt No token found
+            TokenService-->>AuthService: TokenRevokedException
+            AuthService-->>AuthController: TokenRevokedException
+            AuthController-->>Client: 401 Unauthorized
+        else Token expired
+            TokenService->>TokenService: Check expires_at < now()
+            TokenService-->>AuthService: TokenExpiredException
+            AuthService-->>AuthController: TokenExpiredException
+            AuthController-->>Client: 401 Unauthorized
+        else Token hash mismatch
+            TokenService->>TokenService: bcrypt.compare(refreshToken, token_hash)
+            TokenService-->>AuthService: TokenRevokedException
+            AuthService-->>AuthController: TokenRevokedException
+            AuthController-->>Client: 401 Unauthorized
+        end
+    end
+
+    TokenService-->>AuthService: {sub, iat, iss, kid, exp, user_id}
+    Note right of TokenService: Returns complete JWT payload
+
+    AuthService->>UserService: findById(payload.user_id)
+    UserService->>PostgreSQL: SELECT * FROM users WHERE id = ?
+    PostgreSQL-->>UserService: User entity
+
+    AuthService->>AuthService: Check user.is_blocked
+
+    alt User is blocked
+        AuthService-->>AuthController: UserBlockedException
+        AuthController-->>Client: 403 Forbidden
+    else User active
+        AuthService->>TokenService: generateTokenPair(user)
+        TokenService->>KeyManager: getPrivateKey()
+        KeyManager-->>TokenService: PrivateKey (cleared after use)
+
+        TokenService->>TokenService: Sign new access token (RSA)
+        Note right of TokenService: New JWT with fresh iat/exp
+
+        TokenService->>TokenService: Hash new refresh token (bcrypt)
+        Note right of TokenService: bcrypt.hash(newRefreshToken, 10)
+
+        rect rgb(255, 245, 230)
+            Note over TokenService,PostgreSQL: Step 3: Update refresh token
+            AuthService->>TokenService: updateToken(userId, newTokenHash, newExpiresAt)
+            TokenService->>PostgreSQL: UPDATE auth_tokens SET token_hash=?, expires_at=? WHERE user_id=?
+            PostgreSQL-->>TokenService: Updated
+        end
+
+        TokenService-->>AuthService: {accessToken, refreshToken}
+        AuthService-->>AuthController: {accessToken, refreshToken}
+
+        AuthController->>AuthController: Set-Cookie (httpOnly, secure, sameSite=strict)
+        AuthController-->>Client: 200 OK + Set-Cookie
+    end

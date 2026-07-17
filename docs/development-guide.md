@@ -1,349 +1,300 @@
-# AuthService — Development Guide
+# AuthService Development Guide
 
-**Generated:** 2026-07-12  
-**Framework:** NestJS 11.x  
-**Language:** TypeScript 5.8
+## 1. Prerequisites
 
----
+- **Node.js** 22.x
+- **npm** 10+
+- **PostgreSQL** 16+
+- **MongoDB** 7+
+- **Redis** 7+
+- **Docker** and Docker Compose (for infrastructure services)
 
-## Prerequisites
-
-| Tool | Version | Purpose |
-|------|---------|---------|
-| Node.js | 22.x (LTS) | Runtime |
-| PostgreSQL | 16+ | Core database |
-| MongoDB | 7+ | Logging database |
-| Redis | 7+ | Cache/blacklist |
-| npm | 10+ | Package manager |
-
----
-
-## Quick Start
-
-### 1. Clone & Install
+## 2. Quick Start
 
 ```bash
+# Clone the repository
 git clone <repository-url>
 cd AuthService
+
+# Install dependencies
 npm install
-```
 
-### 2. Environment Setup
-
-```bash
-# Copy environment template
+# Copy environment variables
 cp .env.example .env
 
-# Edit .env with your values
-```
-
-**Required Environment Variables:**
-
-```bash
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/authservice
-MONGODB_URL=mongodb://localhost:27017/authservice
-REDIS_URL=redis://localhost:6379
-
-# JWT
-JWT_ACCESS_EXPIRY=1d
-JWT_REFRESH_EXPIRY=7d
-JWT_RESET_EXPIRY=1h
-BCRYPT_COST=10
-
-# Server
-PORT=3000
-NODE_ENV=development
-
-# Logging
-LOG_LEVEL=debug
-```
-
-### 3. Generate Keys
-
-```bash
+# Generate RSA key pair for JWT signing
 npm run setup:keys
-```
 
-This creates `keys.json` with RSA key pair for JWT signing.
+# Start infrastructure services (PostgreSQL, MongoDB, Redis)
+docker-compose up -d
 
-### 4. Start Development
-
-```bash
+# Start the application in development mode
 npm run start:dev
 ```
 
-Server starts at `http://localhost:3000`
+The application will be available at `http://localhost:3000` by default.
 
----
-
-## Available Scripts
-
-| Script | Description | Use Case |
-|--------|-------------|----------|
-| `npm run start:dev` | Start dev server with watch | Development |
-| `npm run start:debug` | Start with debugger | Debugging |
-| `npm run start:prod` | Start production server | Production |
-| `npm run build` | Build for production | Deployment |
-| `npm run test` | Run unit tests | CI/CD |
-| `npm run test:watch` | Run tests in watch mode | TDD |
-| `npm run test:cov` | Run tests with coverage | Coverage reports |
-| `npm run test:e2e` | Run end-to-end tests | Integration testing |
-| `npm run lint` | Lint code | Code quality |
-| `npm run lint:fix` | Lint and auto-fix | Code formatting |
-
----
-
-## Project Structure
+## 3. Project Structure
 
 ```
-AuthService/
-├── src/                          # Source code
-│   ├── main.ts                   # Entry point
-│   ├── app.module.ts             # Root module
-│   ├── app.controller.ts         # Health check
-│   ├── app.service.ts            # Default service
-│   └── modules/                  # Feature modules (planned)
-│       ├── auth/                 # Authentication
-│       ├── user/                 # User management
-│       ├── token/                # Token management
-│       └── logging/              # Logging infrastructure
-│
-├── test/                         # E2E tests
-├── dist/                         # Compiled output
-├── docs/                         # Documentation
-└── _bmad-output/                 # Planning artifacts
+src/
+├── common/
+│   └── ports/              # Port interfaces for dependency inversion
+├── config/
+│   ├── app-context.ts      # Application context setup
+│   ├── env.validator.ts    # Environment variable validation
+│   └── __tests__/
+├── modules/
+│   ├── auth/               # Authentication (login, register, JWT)
+│   │   ├── dto/
+│   │   ├── guards/
+│   │   ├── pipes/
+│   │   └── __tests__/
+│   ├── user/               # User management
+│   │   └── __tests__/
+│   ├── token/              # Token lifecycle (issue, refresh, revoke)
+│   │   └── __tests__/
+│   ├── key/                # RSA key management and rotation
+│   │   └── __tests__/
+│   ├── redis/              # Redis connection and caching
+│   └── logging/            # MongoDB-backed logging (pino + chalk)
+│       └── __tests__/
+├── shared/
+│   ├── exceptions/         # Exception filters and custom exceptions
+│   ├── interceptors/       # Response transformation interceptors
+│   ├── logging/            # Pino logger, chalk transport, middleware
+│   ├── transaction/        # Database transaction utilities
+│   ├── types/              # Shared request types
+│   └── utils/              # Utility functions (geo-lookup, etc.)
+├── types/                  # Application-wide type definitions
+│   ├── api-response.types.ts
+│   ├── jwt.types.ts
+│   └── keys.types.ts
+├── scripts/                # Setup and maintenance scripts
+│   └── setup-keys.ts
+├── app.module.ts           # Root application module
+├── app.controller.ts       # Root controller (health check)
+├── main.ts                 # Application bootstrap
+└── index.ts                # Public API exports
 ```
 
----
+**Directory purposes:**
 
-## Development Workflow
+| Directory | Purpose |
+|---|---|
+| `modules/` | Feature modules, each encapsulating a domain concern |
+| `shared/` | Cross-cutting utilities used by multiple modules |
+| `config/` | Environment validation and application context |
+| `common/ports/` | Port interfaces enabling dependency inversion between modules |
+| `types/` | Shared TypeScript type definitions |
+| `scripts/` | One-off setup and maintenance scripts |
 
-### 1. Create a Module
+## 4. Available Scripts
+
+| Script | Description |
+|---|---|
+| `npm run start:dev` | Start the application in watch mode (hot reload) |
+| `npm run start:debug` | Start in watch mode with Node.js inspector attached |
+| `npm run start:prod` | Run the compiled application from `dist/` |
+| `npm run build` | Compile TypeScript to JavaScript in `dist/` |
+| `npm test` | Run all unit tests with Jest |
+| `npm run test:watch` | Run unit tests in watch mode |
+| `npm run test:cov` | Run tests with coverage report |
+| `npm run test:e2e` | Run end-to-end tests |
+| `npm run lint` | Run ESLint with auto-fix on `src/` and `test/` |
+| `npm run lint:fix` | Alias for `lint` |
+| `npm run setup:keys` | Generate RSA key pair for JWT signing |
+| `npm run db:migrate` | Run TypeORM database migrations |
+| `npm run db:seed` | Seed the database with initial data |
+
+## 5. Path Aliases
+
+The project defines the following TypeScript path aliases:
+
+| Alias | Maps To |
+|---|---|
+| `@modules/*` | `src/modules/*` |
+| `@shared/*` | `src/shared/*` |
+| `@config/*` | `src/config/*` |
+
+**Usage in imports:**
+
+```typescript
+// Instead of relative paths like:
+import { UserService } from '../../user/user.service';
+
+// Use path aliases:
+import { UserService } from '@modules/user/user.service';
+import { PinoLogger } from '@shared/logging/pino-logger';
+import { envValidator } from '@config/env.validator';
+```
+
+## 6. Module Development Pattern
+
+### Creating a new module
 
 ```bash
-# Generate module
-nest g module modules/auth
-
-# Generate controller
-nest g controller modules/auth
-
-# Generate service
-nest g service modules/auth
+nest g module modules/<module-name>
+nest g service modules/<module-name>
+nest g controller modules/<module-name>
 ```
 
-### 2. Module Pattern
+### Module structure
 
-Follow hexagonal architecture:
+Each feature module follows this layout:
 
-```typescript
-// modules/auth/auth.module.ts
-import { Module } from '@nestjs/common';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
-
-@Module({
-  controllers: [AuthController],
-  providers: [AuthService],
-  exports: [AuthService],
-})
-export class AuthModule {}
+```
+src/modules/<module-name>/
+├── <module-name>.module.ts    # NestJS module definition
+├── <module-name>.service.ts   # Business logic
+├── <entity>.entity.ts         # TypeORM entity (if applicable)
+├── dto/                       # Data transfer objects (Zod schemas)
+└── __tests__/                 # Unit tests
 ```
 
-### 3. Dependency Injection
+### Port interface pattern
+
+For loose coupling between modules, define port interfaces in `src/common/ports/`:
 
 ```typescript
-// Use NestJS DI throughout
-@Injectable()
-class AuthService {
-  constructor(
-    @Inject('LogManager') private logManager: LogManager,
-    @InjectRepository(User) private userRepo: UserRepository,
-  ) {}
+// src/common/ports/user.port.ts
+export abstract class UserPort {
+  abstract findById(id: string): Promise<User | null>;
 }
 ```
 
----
+Implement the port in the owning module and provide it via NestJS dependency injection. Consuming modules depend on the port, not the concrete implementation.
 
-## Testing
+### Dependency injection
 
-### Unit Tests
+Modules declare their dependencies in the `@Module` decorator. Services are injected via constructor parameters using `@Injectable()` and the port interfaces defined in `common/ports/`.
+
+## 7. Testing
+
+### Unit tests
 
 ```bash
 # Run all unit tests
-npm run test
+npm test
 
-# Run specific test file
-npm run test -- --testPathPattern=auth.service
+# Run tests in watch mode (re-runs on file changes)
+npm run test:watch
 
-# Run with coverage
+# Run with coverage report
 npm run test:cov
 ```
 
-### E2E Tests
+Unit test files are located in `__tests__/` directories alongside the code they test, using the `.spec.ts` suffix.
+
+### End-to-end tests
 
 ```bash
-# Run e2e tests
 npm run test:e2e
-
-# Run specific e2e test
-npm run test:e2e -- --testPathPattern=auth
 ```
 
-### Test File Convention
+E2E tests are located in the `test/` directory at the project root and use a separate Jest configuration (`test/jest-e2e.json`).
 
-```
-src/modules/auth/
-├── auth.service.ts
-├── auth.service.spec.ts      # Unit test
-└── auth.controller.spec.ts   # Controller test
+### Test conventions
 
-test/
-└── auth.e2e-spec.ts          # E2E test
-```
+- Test files use the `.spec.ts` extension.
+- Tests reside in `__tests__/` directories within each module or shared directory.
+- Use `@nestjs/testing` for creating test modules with proper dependency injection.
+- Mock external dependencies (databases, external services) using Jest mocks.
 
----
+## 8. Code Style
 
-## Code Style
+### ESLint
 
-### ESLint Rules
-
-- `@typescript-eslint/no-explicit-any: off`
-- `@typescript-eslint/explicit-function-return-type: off`
-- Follow NestJS conventions
-
-### Prettier Config
-
-```json
-{
-  "singleQuote": true,
-  "trailingComma": "all"
-}
-```
-
-### TypeScript Config
-
-- Strict mode enabled
-- Target: ES2021
-- Module: CommonJS
-
----
-
-## Database Setup
-
-### PostgreSQL
+The project uses ESLint 9 with `@typescript-eslint`. Run linting with:
 
 ```bash
-# Create database
-createdb authservice
-
-# Run migrations (when implemented)
-npm run migration:run
-
-# Generate migration
-npm run migration:generate -- --name=CreateUsers
+npm run lint
 ```
 
-### MongoDB
+Key rules enforced:
+- Consistent type imports.
+- No unused variables or explicit `any` types.
+- Enforced code style via Prettier integration.
+
+### Prettier
+
+Formatting is handled by Prettier with the ESLint plugin, so linting also applies formatting fixes. The configuration is defined in `eslint.config.mjs`.
+
+### TypeScript
+
+The project uses TypeScript 5.8 with `strict: true` enabled. This means:
+- Strict null checks.
+- No implicit `any`.
+- Strict function types.
+- All strict family checks are active.
+
+Always ensure new code compiles without errors by running `npm run build` before committing.
+
+## 9. Database
+
+### PostgreSQL (TypeORM)
+
+- Used for core domain data (users, tokens, keys).
+- Entity files are located within each module directory (e.g., `user.entity.ts`, `auth-token.entity.ts`).
+- TypeORM connects via environment variables defined in `.env`.
+
+### MongoDB (Mongoose)
+
+- Used for structured logging and demographics tracking.
+- Schemas are defined in the logging module (`demographics.schema.ts`).
+- Connection is managed by `@nestjs/mongoose`.
+
+### Migrations
 
 ```bash
-# Start MongoDB
-mongod --dbpath /data/db
-
-# Collections created automatically
+npm run db:migrate
 ```
 
-### Redis
+Migrations are managed via the TypeORM CLI. The data source configuration is located at `src/config/data-source.ts`.
+
+### Seeding
 
 ```bash
-# Start Redis
-redis-server
-
-# Default port: 6379
+npm run db:seed
 ```
 
----
+Populates the database with initial data required for development.
 
-## Debugging
+## 10. Debugging
 
 ### VS Code
 
-1. Open VS Code
-2. Press F5 (or Run > Start Debugging)
-3. Server starts in debug mode
+The project includes a launch configuration for VS Code. Press `F5` to start debugging with breakpoints, variable inspection, and call stack support.
 
 ### Node Inspector
+
+To attach an external debugger or use Chrome DevTools:
 
 ```bash
 npm run start:debug
 ```
 
-Then open `chrome://inspect` in Chrome.
+This starts the application with `--inspect-brk` and watches for file changes.
 
----
-
-## Common Tasks
-
-### Add New Endpoint
-
-1. Create controller method in relevant module
-2. Add DTO for request validation
-3. Implement service method
-4. Add unit tests
-5. Add e2e test if needed
-
-### Add New Entity
-
-1. Create entity file in module
-2. Define database schema
-3. Create repository
-4. Add CRUD operations
-5. Write tests
-
-### Update Environment
-
-1. Add variable to `.env`
-2. Update `env.validator.ts`
-3. Update `.env.example`
-4. Restart server (required)
-
----
-
-## Troubleshooting
-
-### Port Already in Use
+To debug tests:
 
 ```bash
-# Find process on port 3000
-lsof -i :3000
-
-# Kill process
-kill -9 <PID>
+npm run test:debug
 ```
 
-### Database Connection Failed
+This runs Jest with the Node.js inspector attached, pausing execution on the first line.
 
-1. Check PostgreSQL/MongoDB/Redis is running
-2. Verify connection strings in `.env`
-3. Check firewall/network settings
+### Docker Services
 
-### Build Errors
+To inspect running infrastructure:
 
 ```bash
-# Clean build
-rm -rf dist
-npm run build
+# View logs
+docker-compose logs -f
 
-# Check TypeScript errors
-npx tsc --noEmit
+# Stop services
+docker-compose down
+
+# Stop and remove volumes
+docker-compose down -v
 ```
-
----
-
-## Production Deployment
-
-See [Technical Documentation - Deployment](./technical-documentation.md#11-deployment) for Docker Compose and production checklist.
-
----
-
-*Development guide generated.*
