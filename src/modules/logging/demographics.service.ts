@@ -1,6 +1,6 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
 import { DemographicsRepository } from './demographics.repository';
-import { geoLookup } from '../../shared/utils/geo-lookup';
+import { geoLookup } from '@shared/utils/geo-lookup';
 
 @Injectable()
 export class DemographicsService {

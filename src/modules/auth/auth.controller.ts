@@ -23,7 +23,7 @@ import { RegisterDto, RegisterSchema } from './dto/register.dto';
 import { LoginDto, LoginSchema } from './dto/login.dto';
 import type { TokenResponseDto } from './dto/token-response.dto';
 import { ZodValidationPipe } from './pipes/zod-validation.pipe';
-import { AuthenticationException } from '../../shared/exceptions/authentication.exception';
+import { AuthenticationException } from '@shared/exceptions/authentication.exception';
 
 @ApiTags('auth')
 @Controller('auth')

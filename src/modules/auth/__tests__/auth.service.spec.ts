@@ -10,8 +10,8 @@ import { UserBlockedException } from '@shared/exceptions/authorization.exception
 import { RegisterDto } from '@modules/auth/dto/register.dto';
 import { LoginDto } from '@modules/auth/dto/login.dto';
 import { User } from '@modules/user/user.entity';
-import { USER_SERVICE } from '../../../common/ports/user.token';
-import { TOKEN_SERVICE } from '../../../common/ports/token.token';
+import { USER_SERVICE } from '@shared/lib/interfaces/user.token';
+import { TOKEN_SERVICE } from '@shared/lib/interfaces/token.token';
 
 jest.mock('bcrypt');
 

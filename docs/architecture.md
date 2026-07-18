@@ -2,7 +2,7 @@
 
 ## 1. Architecture Overview
 
-AuthService follows **Hexagonal Architecture** (Ports & Adapters), isolating core business logic from infrastructure concerns. Each feature module depends on port interfaces defined in `src/common/ports/`, not on concrete implementations. Adapters (controllers, repositories, middleware) live at the edges and plug into the core through these ports.
+AuthService follows **Hexagonal Architecture** (Ports & Adapters), isolating core business logic from infrastructure concerns. Each feature module depends on port interfaces defined in `src/shared/lib/interfaces/`, not on concrete implementations. Adapters (controllers, repositories, middleware) live at the edges and plug into the core through these ports.
 
 [Hexagonal Component Architecture](diagrams/08-component-hexagonal.mmd)
 
@@ -23,14 +23,14 @@ The hexagonal pattern was chosen to support future extensibility: swapping authe
 
 ### Port Interfaces
 
-Port interfaces are defined in `src/common/ports/` and consumed via NestJS dependency injection tokens.
+Port interfaces are defined in `src/shared/lib/interfaces/` and consumed via NestJS dependency injection tokens.
 
 | Interface | File | Token | Purpose |
 |-----------|------|-------|---------|
-| `IAuthService` | `src/common/ports/auth.port.ts` | `AUTH_SERVICE` | Registration, login, refresh, logout contracts |
-| `IUserService` | `src/common/ports/user.port.ts` | `USER_SERVICE` | User lookup, creation, demographics logging |
-| `ITokenService` | `src/common/ports/token.port.ts` | `TOKEN_SERVICE` | JWT lifecycle, blacklisting, refresh token storage |
-| `IKeyManager` | `src/common/ports/key-manager.port.ts` | `KEY_MANAGER` | RSA public/private key retrieval by key ID |
+| `IAuthService` | `src/shared/lib/interfaces/auth.interface.ts` | `AUTH_SERVICE` | Registration, login, refresh, logout contracts |
+| `IUserService` | `src/shared/lib/interfaces/user.interface.ts` | `USER_SERVICE` | User lookup, creation, demographics logging |
+| `ITokenService` | `src/shared/lib/interfaces/token.interface.ts` | `TOKEN_SERVICE` | JWT lifecycle, blacklisting, refresh token storage |
+| `IKeyManager` | `src/shared/lib/interfaces/key-manager.interface.ts` | `KEY_MANAGER` | RSA public/private key retrieval by key ID |
 
 ## 3. Request Lifecycle
 

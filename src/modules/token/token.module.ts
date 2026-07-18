@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TokenService } from './token.service';
 import { AuthToken } from './auth-token.entity';
 import { KeyModule } from '../key/key.module';
-import { TOKEN_SERVICE } from '../../common/ports/token.token';
+import { TOKEN_SERVICE } from '@shared/lib/interfaces/token.token';
 
 @Module({
   imports: [TypeOrmModule.forFeature([AuthToken]), KeyModule],

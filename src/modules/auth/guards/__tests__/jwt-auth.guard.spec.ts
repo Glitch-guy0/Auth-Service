@@ -1,13 +1,13 @@
 import { UnauthorizedException } from '@nestjs/common';
 import { ExecutionContext } from '@nestjs/common';
 import { JwtAuthGuard } from '../jwt-auth.guard';
-import { ITokenService } from '../../../../common/ports/token.port';
-import { TOKEN_SERVICE } from '../../../../common/ports/token.token';
+import { ITokenService } from '@shared/lib/interfaces/token.interface';
+import { TOKEN_SERVICE } from '@shared/lib/interfaces/token.token';
 import { RedisService } from '../../../redis/redis.service';
 import {
   TokenInvalidSignatureException,
   TokenExpiredException,
-} from '../../../../shared/exceptions/authentication.exception';
+} from '@shared/exceptions/authentication.exception';
 
 describe('JwtAuthGuard', () => {
   let guard: JwtAuthGuard;

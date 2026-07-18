@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { v7 as uuidv7 } from 'uuid';
-import { KeyPair } from '../types/keys.types';
+import { KeyPair } from '@shared/lib/types/keys.types';
 
 const KEYS_FILE = path.resolve(process.cwd(), 'keys.json');
 

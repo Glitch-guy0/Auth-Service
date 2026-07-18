@@ -5,13 +5,13 @@ import { AuthService } from '../auth.service';
 import { RegisterDto, RegisterSchema } from '../dto/register.dto';
 import { LoginDto } from '../dto/login.dto';
 import { ZodValidationPipe } from '../pipes/zod-validation.pipe';
-import { UserExistsException } from '../../../shared/exceptions/validation.exception';
+import { UserExistsException } from '@shared/exceptions/validation.exception';
 import {
   InvalidCredentialsException,
   TokenExpiredException,
   AuthenticationException,
-} from '../../../shared/exceptions/authentication.exception';
-import { UserBlockedException } from '../../../shared/exceptions/authorization.exception';
+} from '@shared/exceptions/authentication.exception';
+import { UserBlockedException } from '@shared/exceptions/authorization.exception';
 
 describe('AuthController', () => {
   let controller: AuthController;

@@ -6,8 +6,8 @@ import {
   Logger,
   Inject,
 } from '@nestjs/common';
-import { ITokenService } from '../../../common/ports/token.port';
-import { TOKEN_SERVICE } from '../../../common/ports/token.token';
+import { ITokenService } from '@shared/lib/interfaces/token.interface';
+import { TOKEN_SERVICE } from '@shared/lib/interfaces/token.token';
 import { RedisService } from '../../redis/redis.service';
 import type { AuthenticatedRequest } from '../auth.middleware';
 

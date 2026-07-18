@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserService } from './user.service';
 import { User } from './user.entity';
-import { USER_SERVICE } from '../../common/ports/user.token';
+import { USER_SERVICE } from '@shared/lib/interfaces/user.token';
 import { LoggingModule } from '../logging/logging.module';
 
 @Module({

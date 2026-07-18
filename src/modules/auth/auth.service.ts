@@ -1,19 +1,19 @@
 import { Injectable, Logger, Inject } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { IAuthService } from '../../common/ports/auth.port';
-import { IUserService } from '../../common/ports/user.port';
-import { ITokenService } from '../../common/ports/token.port';
+import { IAuthService } from '@shared/lib/interfaces/auth.interface';
+import { IUserService } from '@shared/lib/interfaces/user.interface';
+import { ITokenService } from '@shared/lib/interfaces/token.interface';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { TokenResponseDto } from './dto/token-response.dto';
-import { UserExistsException } from '../../shared/exceptions/validation.exception';
+import { UserExistsException } from '@shared/exceptions/validation.exception';
 import {
   InvalidCredentialsException,
   TokenExpiredException,
-} from '../../shared/exceptions/authentication.exception';
-import { UserBlockedException } from '../../shared/exceptions/authorization.exception';
-import { USER_SERVICE } from '../../common/ports/user.token';
-import { TOKEN_SERVICE } from '../../common/ports/token.token';
+} from '@shared/exceptions/authentication.exception';
+import { UserBlockedException } from '@shared/exceptions/authorization.exception';
+import { USER_SERVICE } from '@shared/lib/interfaces/user.token';
+import { TOKEN_SERVICE } from '@shared/lib/interfaces/token.token';
 
 /**
  * Core authentication service orchestrating user registration, login,

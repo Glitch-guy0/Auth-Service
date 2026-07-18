@@ -11,15 +11,15 @@ import {
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { TokenService } from '../token.service';
-import { IKeyManager } from '../../../common/ports/key-manager.port';
-import { KEY_MANAGER } from '../../../common/ports/key-manager.token';
+import { IKeyManager } from '@shared/lib/interfaces/key-manager.interface';
+import { KEY_MANAGER } from '@shared/lib/interfaces/key-manager.token';
 import { AuthToken } from '../auth-token.entity';
 import { Repository } from 'typeorm';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
   TokenInvalidSignatureException,
   TokenExpiredException,
-} from '../../../shared/exceptions/authentication.exception';
+} from '@shared/exceptions/authentication.exception';
 import { RedisService } from '../../redis/redis.service';
 
 jest.mock('crypto');

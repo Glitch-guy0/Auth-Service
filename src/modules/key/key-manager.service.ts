@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { IKeyManager } from '../../common/ports/key-manager.port';
+import { IKeyManager } from '@shared/lib/interfaces/key-manager.interface';
 import * as fs from 'fs';
 import * as path from 'path';
 

@@ -5,16 +5,16 @@ import { Repository } from 'typeorm';
 import { SignJWT, importPKCS8, jwtVerify, importSPKI } from 'jose';
 import * as crypto from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { ITokenService } from '../../common/ports/token.port';
-import { IKeyManager } from '../../common/ports/key-manager.port';
-import { KEY_MANAGER } from '../../common/ports/key-manager.token';
-import { JwtPayload } from '../../types/jwt.types';
+import { ITokenService } from '@shared/lib/interfaces/token.interface';
+import { IKeyManager } from '@shared/lib/interfaces/key-manager.interface';
+import { KEY_MANAGER } from '@shared/lib/interfaces/key-manager.token';
+import { JwtPayload } from '@shared/lib/types/jwt.types';
 import { TokenResponseDto } from '../auth/dto/token-response.dto';
 import { AuthToken } from './auth-token.entity';
 import {
   TokenInvalidSignatureException,
   TokenExpiredException,
-} from '../../shared/exceptions/authentication.exception';
+} from '@shared/exceptions/authentication.exception';
 import { RedisService } from '../redis/redis.service';
 
 interface RefreshTokenResult {
